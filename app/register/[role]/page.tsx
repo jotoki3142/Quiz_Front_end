@@ -4,22 +4,16 @@ import Link from "next/link";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-
-// Inline icons to avoid external dependency issues
-const EyeIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-
-const EyeSlashIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-    <circle cx="12" cy="12" r="3" />
-    <line x1="1" y1="1" x2="23" y2="23" />
-  </svg>
-);
+import {
+  UserIcon,
+  EnvelopeIcon,
+  LockClosedIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  ArrowRightIcon,
+  AcademicCapIcon,
+  UserGroupIcon
+} from "@heroicons/react/24/outline";
 
 export default function RegisterFormPage({ params }: { params: Promise<{ role: string }> }) {
   const router = useRouter();
@@ -38,14 +32,12 @@ export default function RegisterFormPage({ params }: { params: Promise<{ role: s
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const passwordMismatch = confirmPassword && password !== confirmPassword;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
 
     if (!apiRole) {
       setError("Đường dẫn không hợp lệ. Vui lòng chọn vai trò đăng ký.");
@@ -93,120 +85,201 @@ export default function RegisterFormPage({ params }: { params: Promise<{ role: s
     }
   }
 
-  const title = `Đăng ký ${roleLabel}`;
+  // Visual configuration based on role
+  const themeColor = isTeacher ? 'violet' : 'fuchsia';
+  const gradientFrom = isTeacher ? 'from-violet-600' : 'from-fuchsia-600';
+  const gradientTo = isTeacher ? 'to-indigo-600' : 'to-pink-600';
+  const lightGradient = isTeacher ? 'from-violet-50 to-indigo-50' : 'from-fuchsia-50 to-pink-50';
+  const RoleIcon = isTeacher ? AcademicCapIcon : UserGroupIcon;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
-      <div className="mx-auto w-full rounded-lg border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-8 text-center text-2xl font-semibold text-zinc-900">{title}</h1>
+    <div className={`min-h-screen w-full flex bg-gradient-to-br ${lightGradient}`}>
 
-        <form className="mx-auto max-w-2xl space-y-6" onSubmit={onSubmit}>
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-zinc-800">
-              Email <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder:text-zinc-400 focus:border-[#E33AEC] focus:outline-none focus:ring-2 focus:ring-[#E33AEC]/30"
-              required
+      {/* Left Decoration Section - Dynamic based on role */}
+      <div className={`hidden lg:flex w-1/2 relative overflow-hidden bg-gradient-to-br ${gradientFrom} ${gradientTo} p-12 text-white flex-col justify-between`}>
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+          <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-white/10 blur-3xl"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-black/10 blur-3xl"></div>
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-white/20 backdrop-blur-md rounded-lg">
+              <RoleIcon className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold">Đăng ký {roleLabel}</h1>
+          </div>
+          <p className="text-white/90 text-lg max-w-md leading-relaxed">
+            {isTeacher
+              ? "Tham gia cộng đồng giáo viên để tạo bài giảng, quản lý lớp học và truyền cảm hứng cho học sinh."
+              : "Bắt đầu hành trình học tập, thi đua và chinh phục kiến thức mới mỗi ngày."
+            }
+          </p>
+        </div>
+
+        <div className="relative z-10 flex justify-center my-8">
+          <div className="relative w-full max-w-md aspect-square bg-white/10 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/20 shadow-2xl">
+            {/* Placeholder for role-specific illustration */}
+            <img
+              src={isTeacher ? "/roles/teacher.png" : "/roles/student.png"}
+              alt={roleLabel}
+              className="w-full h-full object-contain p-8 transform hover:scale-105 transition-transform duration-500"
             />
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-zinc-800">
-              Tên hiển thị <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-md border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder:text-zinc-400 focus:border-[#E33AEC] focus:outline-none focus:ring-2 focus:ring-[#E33AEC]/30"
-              required
-            />
-          </div>
+        <div className="relative z-10 text-sm text-white/70">
+          &copy; {new Date().getFullYear()} QuizzZone Inc. All rights reserved.
+        </div>
+      </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-zinc-800">
-              Mật khẩu <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border border-zinc-300 bg-white px-4 py-3 pr-12 text-zinc-900 placeholder:text-zinc-400 focus:border-[#E33AEC] focus:outline-none focus:ring-2 focus:ring-[#E33AEC]/30"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700"
-                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-              >
-                {showPassword ? (
-                  <EyeSlashIcon className="h-5 w-5" />
-                ) : (
-                  <EyeIcon className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-zinc-800">
-              Nhập lại mật khẩu <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded-md border border-zinc-300 bg-white px-4 py-3 pr-12 text-zinc-900 placeholder:text-zinc-400 focus:border-[#E33AEC] focus:outline-none focus:ring-2 focus:ring-[#E33AEC]/30"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700"
-                aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-              >
-                {showConfirmPassword ? (
-                  <EyeSlashIcon className="h-5 w-5" />
-                ) : (
-                  <EyeIcon className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-            {!passwordMismatch ? null : (
-              <p className="text-sm text-rose-600 mt-1">Mật khẩu nhập lại không khớp.</p>
-            )}
-          </div>
-
-          {(error || success) && (
-            <div className={`rounded-md px-4 py-3 text-sm ${error ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
-              {error || success}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between text-sm">
-            <p className="text-zinc-600">
-              Bạn đã có tài khoản? <Link href="/auth/login" className="font-medium text-[#E33AEC] hover:underline">Đăng nhập</Link>
+      {/* Right Form Section */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 overflow-y-auto">
+        <div className="w-full max-w-md bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl shadow-zinc-200/50 border border-white my-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-zinc-900 mb-2">Tạo tài khoản mới</h2>
+            <p className="text-zinc-500">
+              Nhập thông tin chi tiết để bắt đầu.
             </p>
           </div>
 
-          <div className="pt-2 text-center">
+          <form onSubmit={onSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-zinc-700 ml-1">Email</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <EnvelopeIcon className="w-5 h-5 text-zinc-400 group-focus-within:text-violet-500 transition-colors" />
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="block w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all outline-none text-zinc-900 placeholder:text-zinc-400"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-zinc-700 ml-1">Tên hiển thị</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <UserIcon className="w-5 h-5 text-zinc-400 group-focus-within:text-violet-500 transition-colors" />
+                </div>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Nguyễn Văn A"
+                  className="block w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all outline-none text-zinc-900 placeholder:text-zinc-400"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-zinc-700 ml-1">Mật khẩu</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <LockClosedIcon className="w-5 h-5 text-zinc-400 group-focus-within:text-violet-500 transition-colors" />
+                </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="block w-full pl-10 pr-12 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all outline-none text-zinc-900 placeholder:text-zinc-400"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="w-5 h-5" />
+                  ) : (
+                    <EyeIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-zinc-500 ml-1">Ít nhất 6 ký tự</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-zinc-700 ml-1">Nhập lại mật khẩu</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <LockClosedIcon className={`w-5 h-5 transition-colors ${passwordMismatch ? 'text-rose-400' : 'text-zinc-400 group-focus-within:text-violet-500'}`} />
+                </div>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={`block w-full pl-10 pr-12 py-3 bg-zinc-50 border rounded-xl outline-none text-zinc-900 placeholder:text-zinc-400 transition-all ${passwordMismatch
+                      ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+                      : 'border-zinc-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20'
+                    }`}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                >
+                  {showConfirmPassword ? (
+                    <EyeSlashIcon className="w-5 h-5" />
+                  ) : (
+                    <EyeIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              {passwordMismatch && (
+                <p className="text-xs text-rose-600 ml-1 animate-in slide-in-from-top-1">Mật khẩu không khớp</p>
+              )}
+            </div>
+
+            {error && (
+              <div className="p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-sm font-medium animate-in slide-in-from-top-2 flex items-start gap-2">
+                <span>⚠️</span>
+                <span>{error}</span>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className="mx-auto w-56 rounded-full bg-[#E33AEC] px-6 py-3 font-semibold text-white shadow-sm hover:bg-[#d22adc] disabled:opacity-60"
+              className={`w-full flex items-center justify-center gap-2 text-white font-semibold py-3.5 rounded-xl transition-all shadow-lg shadow-violet-500/30 disabled:opacity-70 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] ${isTeacher ? 'bg-violet-600 hover:bg-violet-700' : 'bg-fuchsia-600 hover:bg-fuchsia-700'
+                }`}
             >
-              {loading ? 'Đang đăng ký...' : 'Đăng ký'}
+              {loading ? (
+                <>
+                  <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Đang đăng ký...</span>
+                </>
+              ) : (
+                <>
+                  <span>Đăng ký {roleLabel}</span>
+                  <ArrowRightIcon className="w-5 h-5" />
+                </>
+              )}
             </button>
+          </form>
+
+          <div className="mt-8 text-center">
+            <p className="text-zinc-500 text-sm">
+              Bạn đã có tài khoản?{' '}
+              <Link href="/auth/login" className={`font-semibold hover:underline transition-all ${isTeacher ? 'text-violet-600 hover:text-violet-700' : 'text-fuchsia-600 hover:text-fuchsia-700'
+                }`}>
+                Đăng nhập ngay
+              </Link>
+            </p>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
 }
+
