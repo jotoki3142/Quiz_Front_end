@@ -36,6 +36,8 @@ export interface UserTableProps<T> {
     statusOptions: { value: string; label: string }[];
     onSearch: () => void;
     onClearFilters: () => void;
+    showStatusFilter?: boolean;
+    showClearFilter?: boolean;
 }
 
 export default function UserTable<T>({
@@ -57,6 +59,8 @@ export default function UserTable<T>({
     statusOptions,
     onSearch,
     onClearFilters,
+    showStatusFilter = true,
+    showClearFilter = true,
 }: UserTableProps<T>) {
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -119,34 +123,38 @@ export default function UserTable<T>({
                                 />
                             </div>
 
-                            <div className="relative md:w-48 group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <FunnelIcon className="w-5 h-5 text-zinc-400 group-focus-within:text-violet-600 transition-colors" />
+                            {showStatusFilter && (
+                                <div className="relative md:w-48 group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <FunnelIcon className="w-5 h-5 text-zinc-400 group-focus-within:text-violet-600 transition-colors" />
+                                    </div>
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value)}
+                                        className="w-full pl-10 pr-8 py-3 rounded-xl bg-white border border-transparent focus:border-violet-300 focus:ring-4 focus:ring-violet-100 text-zinc-900 focus:outline-none appearance-none cursor-pointer transition-all text-sm shadow-sm"
+                                    >
+                                        <option className="text-gray-900" value="all">Tất cả trạng thái</option>
+                                        {statusOptions.map((opt) => (
+                                            <option key={opt.value} className="text-gray-900" value={opt.value}>
+                                                {opt.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <ArrowsPointingOutIcon className="w-4 h-4 text-zinc-400" />
+                                    </div>
                                 </div>
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="w-full pl-10 pr-8 py-3 rounded-xl bg-white border border-transparent focus:border-violet-300 focus:ring-4 focus:ring-violet-100 text-zinc-900 focus:outline-none appearance-none cursor-pointer transition-all text-sm shadow-sm"
-                                >
-                                    <option className="text-gray-900" value="all">Tất cả trạng thái</option>
-                                    {statusOptions.map((opt) => (
-                                        <option key={opt.value} className="text-gray-900" value={opt.value}>
-                                            {opt.label}
-                                        </option>
-                                    ))}
-                                </select>
-                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <ArrowsPointingOutIcon className="w-4 h-4 text-zinc-400" />
-                                </div>
-                            </div>
+                            )}
 
                             <div className="flex items-center gap-2 mt-2 md:mt-0">
-                                <button
-                                    onClick={onClearFilters}
-                                    className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-semibold transition-colors whitespace-nowrap"
-                                >
-                                    Xóa lọc
-                                </button>
+                                {showClearFilter && (
+                                    <button
+                                        onClick={onClearFilters}
+                                        className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-semibold transition-colors whitespace-nowrap"
+                                    >
+                                        Xóa lọc
+                                    </button>
+                                )}
                                 <button
                                     onClick={onSearch}
                                     className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-white text-violet-600 hover:bg-violet-50 text-sm font-bold shadow-lg transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
