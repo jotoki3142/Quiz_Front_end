@@ -7,7 +7,7 @@ import {
     LockClosedIcon,
     LockOpenIcon,
     FunnelIcon,
-    ArrowsPointingOutIcon
+    ChevronDownIcon
 } from "@heroicons/react/24/outline";
 
 export interface Column<T> {
@@ -141,7 +141,7 @@ export default function UserTable<T>({
                                         ))}
                                     </select>
                                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                        <ArrowsPointingOutIcon className="w-4 h-4 text-zinc-400" />
+                                        <ChevronDownIcon className="w-4 h-4 text-zinc-400" />
                                     </div>
                                 </div>
                             )}

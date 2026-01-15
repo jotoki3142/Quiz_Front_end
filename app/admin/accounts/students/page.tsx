@@ -254,7 +254,7 @@ export default function StudentAccountsPage() {
             {s.username.charAt(0).toUpperCase()}
           </div>
           <div>
-            <p className="font-semibold text-zinc-900">{s.username}</p>
+            <p className="font-semibold text-zinc-900 group-hover:text-violet-700 transition-colors">{s.username}</p>
             <p className="text-xs text-zinc-500">ID: {s.studentId}</p>
           </div>
         </div>
@@ -277,8 +277,8 @@ export default function StudentAccountsPage() {
             <button
               onClick={() => handleToggleLock(s)}
               className={`p-2 rounded-lg transition-colors ${s.status === 'LOCKED'
-                  ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                  : 'bg-amber-50 text-amber-600 hover:bg-amber-100'
+                ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                : 'bg-amber-50 text-amber-600 hover:bg-amber-100'
                 }`}
               title={s.status === 'LOCKED' ? "Mở khóa" : "Khóa tài khoản"}
             >

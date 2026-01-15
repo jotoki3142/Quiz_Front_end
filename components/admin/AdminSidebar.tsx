@@ -40,6 +40,8 @@ const navItems: NavItem[] = [
         href: "/admin/approve-teachers",
         icon: <CheckBadgeIcon className="w-5 h-5" />,
     },
+    { name: "Danh mục", href: "/admin/categories", icon: <FolderIcon className="w-5 h-5" /> },
+    { name: "Câu hỏi", href: "/admin/questions", icon: <QuestionMarkCircleIcon className="w-5 h-5" /> },
     {
         name: "Quản lý bài thi",
         href: "/admin/exams",
@@ -49,8 +51,6 @@ const navItems: NavItem[] = [
             { name: "Tạo bài thi", href: "/admin/exam-online" },
         ],
     },
-    { name: "Danh mục", href: "/admin/categories", icon: <FolderIcon className="w-5 h-5" /> },
-    { name: "Câu hỏi", href: "/admin/questions", icon: <QuestionMarkCircleIcon className="w-5 h-5" /> },
 ];
 
 export default function AdminSidebar({
