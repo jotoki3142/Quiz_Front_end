@@ -16,7 +16,8 @@ import {
     GlobeAsiaAustraliaIcon,
     LockClosedIcon,
     UserIcon,
-    ChevronDownIcon
+    ChevronDownIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'; // Using outline icons for consistency
 
 // --- Interfaces ---
@@ -459,6 +460,55 @@ const QuestionDetailModal = ({ question, onClose }: { question: Question | null,
 };
 
 
+const DeleteConfirmModal = ({
+    isOpen,
+    onClose,
+    onConfirm,
+    questionTitle,
+    loading
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => Promise<void>;
+    questionTitle: string;
+    loading: boolean;
+}) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] backdrop-blur-sm">
+            <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-200 text-center">
+                <div className="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ExclamationTriangleIcon className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-zinc-900 mb-2">Xác nhận xóa</h3>
+                <p className="text-zinc-500 mb-6">
+                    Bạn có chắc chắn muốn xóa câu hỏi <span className="font-bold text-zinc-900">"{questionTitle}"</span>?
+                    Hành động này không thể hoàn tác.
+                </p>
+
+                <div className="flex gap-3 justify-center">
+                    <button
+                        onClick={onClose}
+                        className="px-5 py-2.5 rounded-xl font-semibold text-zinc-600 hover:bg-zinc-100 transition-colors w-full"
+                        disabled={loading}
+                    >
+                        Hủy
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className="px-5 py-2.5 rounded-xl font-semibold text-white bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all shadow-lg shadow-rose-200 w-full disabled:opacity-70"
+                        disabled={loading}
+                    >
+                        {loading ? "Đang xóa..." : "Xóa"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 // --- Main Page ---
 
 export default function QuestionsPage() {
@@ -483,6 +533,8 @@ export default function QuestionsPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [detailQuestion, setDetailQuestion] = useState<Question | null>(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deletingQuestion, setDeletingQuestion] = useState<Question | null>(null);
 
     // Initial Load
     useEffect(() => {
@@ -540,7 +592,30 @@ export default function QuestionsPage() {
         try {
             // Transform answers to ensure correct format
             const validAnswers = data.answers.filter((a: any) => a.text.trim());
-            // TODO: Add thorough validation here if needed
+
+            // Validation
+            if (validAnswers.length === 0) {
+                toast.error("Vui lòng nhập ít nhất một đáp án");
+                setLoading(false);
+                return;
+            }
+
+            const correctCount = validAnswers.filter((a: any) => a.correct).length;
+            if (data.type === 'SINGLE' && correctCount !== 1) {
+                toast.error("Câu hỏi Một đáp án phải có duy nhất 1 đáp án đúng");
+                setLoading(false);
+                return;
+            }
+            if (data.type === 'MULTIPLE' && correctCount < 2) {
+                toast.error("Câu hỏi Nhiều đáp án phải có ít nhất 2 đáp án đúng");
+                setLoading(false);
+                return;
+            }
+            if (data.type === 'TRUE_FALSE' && correctCount !== 1) {
+                toast.error("Câu hỏi Đúng/Sai phải có 1 đáp án đúng");
+                setLoading(false);
+                return;
+            }
 
             const payload = {
                 ...data,
@@ -565,13 +640,20 @@ export default function QuestionsPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!confirm("Bạn có chắc chắn muốn xóa câu hỏi này?")) return;
+    const handleDeleteClick = (question: Question) => {
+        setDeletingQuestion(question);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deletingQuestion) return;
         setLoading(true);
         try {
-            await fetchApi(`/questions/delete/${id}`, { method: 'DELETE' });
+            await fetchApi(`/questions/delete/${deletingQuestion.id}`, { method: 'DELETE' });
             toast.success("Đã xóa câu hỏi");
             fetchQuestions();
+            setIsDeleteModalOpen(false);
+            setDeletingQuestion(null);
         } catch (error: any) {
             toast.error(error.message || "Xóa thất bại");
         } finally {
@@ -599,8 +681,8 @@ export default function QuestionsPage() {
                                     Ngân hàng câu hỏi của hệ thống. Tạo, chỉnh sửa và quản lý các câu hỏi cho bài thi.
                                 </p>
                             </div>
-                            <div className="px-5 py-2.5 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 font-bold shadow-lg">
-                                {totalElements} <span className="text-violet-100 font-medium ml-1">câu hỏi</span>
+                            <div className="px-5 py-2.5 rounded-2xl bg-white backdrop-blur-md border border-white/30 font-bold shadow-lg text-violet-700">
+                                {totalElements} <span className="text-violet-500 font-medium ml-1">câu hỏi</span>
                             </div>
                         </div>
 
@@ -711,13 +793,13 @@ export default function QuestionsPage() {
                         <table className="w-full text-left text-sm text-zinc-600">
                             <thead className="bg-zinc-50 border-b border-zinc-200">
                                 <tr>
-                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs w-16">STT</th>
+                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs w-16 whitespace-nowrap">STT</th>
                                     <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs">Nội dung câu hỏi</th>
-                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs w-32">Loại</th>
-                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs w-32">Độ khó</th>
-                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs w-32">Danh mục</th>
-                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs w-32">Trạng thái</th>
-                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs text-right w-36">Thao tác</th>
+                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs whitespace-nowrap">Loại</th>
+                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs whitespace-nowrap">Độ khó</th>
+                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs whitespace-nowrap">Danh mục</th>
+                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs whitespace-nowrap">Trạng thái</th>
+                                    <th className="px-6 py-4 font-bold text-zinc-400 uppercase tracking-wider text-xs text-right whitespace-nowrap">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-100">
@@ -746,8 +828,8 @@ export default function QuestionsPage() {
                                         <tr key={q.id} className="group hover:bg-violet-50/40 transition-colors">
                                             <td className="px-6 py-4 font-medium text-zinc-400">{page * PAGE_SIZE + idx + 1}</td>
                                             <td className="px-6 py-4">
-                                                <div className="max-w-md">
-                                                    <p className="font-bold text-zinc-800 line-clamp-1 group-hover:text-violet-700 transition-colors cursor-pointer" onClick={() => setDetailQuestion(q)}>
+                                                <div className="max-w-xl">
+                                                    <p className="font-bold text-zinc-800 line-clamp-2 group-hover:text-violet-700 transition-colors cursor-pointer" onClick={() => setDetailQuestion(q)}>
                                                         {q.title}
                                                     </p>
                                                     <div className="flex items-center gap-2 mt-1">
@@ -755,11 +837,11 @@ export default function QuestionsPage() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4"><TypeBadge type={q.type} /></td>
-                                            <td className="px-6 py-4"><DifficultyBadge difficulty={q.difficulty} /></td>
-                                            <td className="px-6 py-4 font-medium text-zinc-600">{q.categoryName}</td>
-                                            <td className="px-6 py-4"><VisibilityBadge visibility={q.visibility} /></td>
-                                            <td className="px-6 py-4 text-right">
+                                            <td className="px-6 py-4 whitespace-nowrap"><TypeBadge type={q.type} /></td>
+                                            <td className="px-6 py-4 whitespace-nowrap"><DifficultyBadge difficulty={q.difficulty} /></td>
+                                            <td className="px-6 py-4 font-medium text-zinc-600 whitespace-nowrap">{q.categoryName}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap"><VisibilityBadge visibility={q.visibility} /></td>
+                                            <td className="px-6 py-4 text-right whitespace-nowrap">
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button onClick={() => setDetailQuestion(q)} className="p-2 rounded-lg text-sky-600 hover:bg-sky-100 transition-colors" title="Xem chi tiết">
                                                         <EyeIcon className="w-5 h-5" />
@@ -767,7 +849,7 @@ export default function QuestionsPage() {
                                                     <button onClick={() => { setEditingQuestion(q); setIsEditModalOpen(true); }} className="p-2 rounded-lg text-violet-600 hover:bg-violet-100 transition-colors" title="Sửa">
                                                         <PencilSquareIcon className="w-5 h-5" />
                                                     </button>
-                                                    <button onClick={() => handleDelete(q.id)} className="p-2 rounded-lg text-rose-500 hover:bg-rose-100 transition-colors" title="Xóa">
+                                                    <button onClick={() => handleDeleteClick(q)} className="p-2 rounded-lg text-rose-500 hover:bg-rose-100 transition-colors" title="Xóa">
                                                         <TrashIcon className="w-5 h-5" />
                                                     </button>
                                                 </div>
@@ -873,6 +955,14 @@ export default function QuestionsPage() {
             <QuestionDetailModal
                 question={detailQuestion}
                 onClose={() => setDetailQuestion(null)}
+            />
+
+            <DeleteConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                questionTitle={deletingQuestion?.title || ""}
+                loading={loading}
             />
         </div>
     );

@@ -314,8 +314,8 @@ export default function CategoriesPage() {
                                     Quản lý các danh mục môn học và chủ đề cho ngân hàng câu hỏi.
                                 </p>
                             </div>
-                            <div className="px-5 py-2.5 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 font-bold shadow-lg">
-                                {totalElements} <span className="text-violet-100 font-medium ml-1">danh mục</span>
+                            <div className="px-5 py-2.5 rounded-2xl bg-white backdrop-blur-md border border-white/30 font-bold shadow-lg text-violet-700">
+                                {totalElements} <span className="text-violet-500 font-medium ml-1">danh mục</span>
                             </div>
                         </div>
 
