@@ -92,7 +92,7 @@ export default function AdminSidebar({
             >
                 <div className="flex items-center justify-between p-6">
                     <Link href="/admin" className="flex items-center gap-2">
-                        <span className="text-2xl font-black bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                        <span className="text-3xl font-black tracking-tighter text-[#E33AEC]">
                             QuizzZone
                         </span>
                     </Link>
