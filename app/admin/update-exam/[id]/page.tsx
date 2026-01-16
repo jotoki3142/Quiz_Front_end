@@ -7,6 +7,28 @@ import * as Yup from "yup";
 import { fetchApi } from "@/lib/apiClient";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { useUser } from "@/lib/user";
+import { createPortal } from "react-dom";
+import {
+    PencilSquareIcon,
+    PlusCircleIcon,
+    TrashIcon,
+    MagnifyingGlassIcon,
+    TagIcon,
+    SwatchIcon,
+    ClockIcon,
+    ArrowLeftIcon,
+    BookOpenIcon,
+    CheckCircleIcon,
+    FunnelIcon,
+    XMarkIcon,
+    AdjustmentsHorizontalIcon,
+    ListBulletIcon,
+    Squares2X2Icon,
+    FolderIcon,
+    ChevronDownIcon,
+    EyeIcon
+} from "@heroicons/react/24/outline";
+import { CheckIcon } from "@heroicons/react/20/solid";
 
 // ===== TYPES =====
 interface Answer {
@@ -21,10 +43,10 @@ interface Question {
     type: string;
     difficulty: string;
     categoryId: string | number;
-    categoryName?: string; // New field
+    categoryName?: string;
     answers: Answer[];
-    createdBy?: string; // New field
-    visibility?: string; // New field
+    createdBy?: string;
+    visibility?: string;
     isReadOnly?: boolean;
 }
 
@@ -32,7 +54,7 @@ interface ExamFormValues {
     title: string;
     durationMinutes: number;
     categoryId: string | number;
-    examLevel: string; // NEW: Exam Difficulty
+    examLevel: string;
     startTime: string; // HH:mm
     startDate: string; // YYYY-MM-DD
     endTime: string;   // HH:mm
@@ -58,7 +80,7 @@ const validationSchema = Yup.object().shape({
         .required("Thời gian làm bài là bắt buộc")
         .min(1, "Thời gian phải lớn hơn 0"),
     categoryId: Yup.string().required("Danh mục là bắt buộc"),
-    examLevel: Yup.string().required("Độ khó là bắt buộc"), // NEW Validation
+    examLevel: Yup.string().required("Độ khó là bắt buộc"),
     questions: Yup.array().of(
         Yup.object().shape({
             title: Yup.string().required("Tiêu đề câu hỏi là bắt buộc"),
@@ -80,6 +102,163 @@ const validationSchema = Yup.object().shape({
     ),
 });
 
+// --- Badge Components ---
+const TypeBadge = ({ type }: { type: string }) => {
+    switch (type) {
+        case 'SINGLE':
+            return <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-violet-100 text-violet-700">Một đáp án</div>;
+        case 'MULTIPLE':
+            return <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-fuchsia-100 text-fuchsia-700">Nhiều đáp án</div>;
+        case 'TRUE_FALSE':
+            return <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-100 text-cyan-700">Đúng/Sai</div>;
+        default:
+            return <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-zinc-100 text-zinc-500">{type}</div>;
+    }
+};
+
+const DifficultyBadge = ({ difficulty }: { difficulty: string }) => {
+    switch (difficulty) {
+        case 'EASY':
+        case 'Easy':
+            return <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">Dễ</div>;
+        case 'MEDIUM':
+        case 'Medium':
+            return <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">Trung bình</div>;
+        case 'HARD':
+        case 'Hard':
+            return <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">Khó</div>;
+        default:
+            return <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-zinc-100 text-zinc-500 border border-zinc-200">{difficulty}</div>;
+    }
+};
+
+const VisibilityBadge = ({ visibility }: { visibility?: string }) => {
+    if (visibility === 'PUBLIC') {
+        return <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1">Công khai</div>;
+    }
+    return <div className="px-2.5 py-1 rounded-lg text-xs font-bold bg-zinc-100 text-zinc-600 border border-zinc-200 flex items-center gap-1">Riêng tư</div>;
+};
+
+// --- Modals ---
+const QuestionDetailModal = ({ question, onClose }: { question: Question | null, onClose: () => void }) => {
+    if (!question) return null;
+
+    return createPortal(
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[99999] backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                {/* Header */}
+                <div className="flex justify-between items-center px-8 py-5 border-b border-zinc-100 bg-zinc-50/50 backdrop-blur-md shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-violet-100 rounded-xl text-violet-600">
+                            <EyeIcon className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-zinc-900">Chi tiết câu hỏi</h2>
+                            <p className="text-sm text-zinc-500 font-medium">ID: #{question.id}</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors">
+                        <XMarkIcon className="w-6 h-6" />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto p-8 space-y-8">
+
+                    {/* Metadata Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center text-center gap-1 group hover:border-violet-200 transition-colors">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Loại câu hỏi</span>
+                            <TypeBadge type={question.type} />
+                        </div>
+                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center text-center gap-1 group hover:border-violet-200 transition-colors">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Độ khó</span>
+                            <DifficultyBadge difficulty={question.difficulty} />
+                        </div>
+                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center text-center gap-1 group hover:border-violet-200 transition-colors">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Trạng thái</span>
+                            <VisibilityBadge visibility={question.visibility} />
+                        </div>
+                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center text-center gap-1 group hover:border-violet-200 transition-colors">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Danh mục</span>
+                            <span className="px-2 py-0.5 rounded text-sm font-bold text-zinc-700 truncate max-w-full" title={question.categoryName}>
+                                {question.categoryName || "Chưa phân loại"}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Question Content */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Nội dung câu hỏi
+                        </h3>
+                        <div className="bg-white p-6 rounded-2xl border-2 border-zinc-100 shadow-sm">
+                            <p className="text-xl font-medium text-zinc-900 leading-relaxed">
+                                {question.title}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Answers Section */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Danh sách đáp án
+                        </h3>
+                        <div className="grid gap-3">
+                            {question.answers?.map((ans, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`relative flex items-start gap-4 p-4 rounded-xl border-2 transition-all ${ans.isCorrect
+                                        ? 'bg-emerald-50/50 border-emerald-500 shadow-emerald-100 shadow-lg'
+                                        : 'bg-white border-zinc-100 hover:border-zinc-200'
+                                        }`}
+                                >
+                                    <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold border transition-colors ${ans.isCorrect
+                                        ? 'bg-emerald-500 text-white border-emerald-500'
+                                        : 'bg-zinc-100 text-zinc-400 border-zinc-200'
+                                        }`}>
+                                        {String.fromCharCode(65 + idx)}
+                                    </div>
+                                    <div className="flex-1 pt-1">
+                                        <p className={`font-medium text-base ${ans.isCorrect ? 'text-emerald-900' : 'text-zinc-600'}`}>
+                                            {ans.text}
+                                        </p>
+                                    </div>
+                                    {ans.isCorrect && (
+                                        <div className="absolute top-4 right-4">
+                                            <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-white px-2 py-1 rounded-full border border-emerald-200 shadow-sm">
+                                                <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                                Đáp án đúng
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-8 py-5 bg-zinc-50 border-t border-zinc-100 flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2 text-zinc-500">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        <span>Người tạo: <span className="font-semibold text-zinc-700">{question.createdByName || question.createdBy || "Admin"}</span></span>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="px-6 py-2.5 rounded-xl font-bold text-zinc-700 bg-white border border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm"
+                    >
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
 export default function AdminUpdateExamPage() {
     const { id } = useParams();
     const router = useRouter();
@@ -98,6 +277,11 @@ export default function AdminUpdateExamPage() {
     const [searchDifficulty, setSearchDifficulty] = useState("");
     const [searchType, setSearchType] = useState("");
 
+    // Improved UI States for Library
+    const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([]);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [detailQuestion, setDetailQuestion] = useState<Question | null>(null);
+
     // Fetch Data
     useEffect(() => {
         const fetchData = async () => {
@@ -110,7 +294,6 @@ export default function AdminUpdateExamPage() {
                 ]);
                 setCategories(cats);
 
-                // Map difficulties (assuming response is array of strings or objects)
                 const difficultyMap: Record<string, string> = {
                     'Easy': 'Dễ',
                     'Medium': 'Trung bình',
@@ -147,7 +330,6 @@ export default function AdminUpdateExamPage() {
                     isReadOnly: eq.question.createdBy !== user.username
                 })) || [];
 
-                // Empty default if needed... omitted for brevity or keeping original logic
                 if (mappedQuestions.length === 0) {
                     mappedQuestions.push({
                         title: "",
@@ -174,11 +356,11 @@ export default function AdminUpdateExamPage() {
                     title: exam.title,
                     durationMinutes: exam.durationMinutes,
                     categoryId: exam.category?.id || "",
-                    examLevel: exam.examLevel || "", // Map examLevel
+                    examLevel: exam.examLevel || "",
                     startTime: startTimeObj.toTimeString().slice(0, 5),
-                    startDate: formatLocalDate(startTimeObj), // Use local formatted date
+                    startDate: formatLocalDate(startTimeObj),
                     endTime: endTimeObj.toTimeString().slice(0, 5),
-                    endDate: formatLocalDate(endTimeObj),   // Use local formatted date
+                    endDate: formatLocalDate(endTimeObj),
                     questions: mappedQuestions,
                     status: exam.status || 'DRAFT'
                 });
@@ -203,7 +385,6 @@ export default function AdminUpdateExamPage() {
             if (searchType) params.append("type", searchType);
 
             const data = await fetchApi(`/questions/search?${params.toString()}`);
-            // Map API response to Question interface
             const mapped = data.content.map((q: any) => {
                 const mappedAnswers = q.answers.map((a: any) => ({
                     id: a.id,
@@ -211,7 +392,6 @@ export default function AdminUpdateExamPage() {
                     isCorrect: a.correct
                 }));
 
-                // Fallback: If no answer is marked correct, check q.correctAnswer
                 if (!mappedAnswers.some((a: any) => a.isCorrect) && q.correctAnswer) {
                     mappedAnswers.forEach((a: any) => {
                         if (a.text === q.correctAnswer || a.text.toLowerCase() === q.correctAnswer.toLowerCase()) {
@@ -226,10 +406,10 @@ export default function AdminUpdateExamPage() {
                     type: q.type,
                     difficulty: q.difficulty,
                     categoryId: q.category?.id,
-                    categoryName: q.categoryName || q.category?.name, // Map category name
-                    createdBy: q.createdBy, // Map creator
+                    categoryName: q.categoryName || q.category?.name,
+                    createdBy: q.createdBy,
                     answers: mappedAnswers,
-                    isReadOnly: true // Mark as read-only
+                    isReadOnly: true
                 };
             });
             setLibraryQuestions(mapped);
@@ -239,15 +419,21 @@ export default function AdminUpdateExamPage() {
         }
     };
 
+    const toggleQuestionSelection = (question: Question) => {
+        if (selectedQuestions.find(q => q.id === question.id)) {
+            setSelectedQuestions(selectedQuestions.filter(q => q.id !== question.id));
+        } else {
+            setSelectedQuestions([...selectedQuestions, question]);
+        }
+    };
+
     // Submit Handler
     const handleSubmit = async (values: ExamFormValues) => {
         try {
             const currentStatus = submitAction || 'DRAFT';
             const questionIds: number[] = [];
 
-            // 1. Process Questions (Create/Update)
             for (const q of values.questions) {
-                // If ReadOnly, just push ID and skip update
                 if (q.isReadOnly && q.id) {
                     questionIds.push(q.id);
                     continue;
@@ -268,13 +454,11 @@ export default function AdminUpdateExamPage() {
 
                 let savedQ;
                 if (q.id) {
-                    // Update existing
                     savedQ = await fetchApi(`/questions/edit/${q.id}`, {
                         method: "PATCH",
                         body: JSON.stringify(payload),
                     });
                 } else {
-                    // Create new
                     savedQ = await fetchApi("/questions/create", {
                         method: "POST",
                         body: JSON.stringify({ ...payload, createdBy: "Admin", visibility: "PRIVATE" }),
@@ -286,12 +470,11 @@ export default function AdminUpdateExamPage() {
                 }
             }
 
-            // 2. Update Exam
             const examPayload = {
                 title: values.title,
                 durationMinutes: values.durationMinutes,
                 categoryId: values.categoryId,
-                examLevel: values.examLevel, // Include examLevel
+                examLevel: values.examLevel,
                 startTime: `${values.startDate}T${values.startTime}:00`,
                 endTime: `${values.endDate}T${values.endTime}:00`,
                 questionIds: questionIds,
@@ -304,7 +487,7 @@ export default function AdminUpdateExamPage() {
                 body: JSON.stringify(examPayload),
             });
 
-            toastSuccess(currentStatus === 'DRAFT' ? "Đã lưu nháp!" : "Đã đăng bài thành công!");
+            toastSuccess(currentStatus === 'DRAFT' ? "Đã lưu nháp!" : "Đã cập nhật bài thi!");
             router.push("/admin/list-exam");
         } catch (error: any) {
             console.error("Submit error:", error);
@@ -312,440 +495,637 @@ export default function AdminUpdateExamPage() {
         }
     };
 
-    if (loading || !initialValues) return <div className="p-10">Đang tải...</div>;
+    if (loading || !initialValues) return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
+        </div>
+    );
 
     return (
-        <div className="min-h-screen bg-[#F5F5F5] p-8">
-            <Formik
-                initialValues={initialValues}
-                validationSchema={validationSchema}
-                onSubmit={handleSubmit}
-                enableReinitialize
-            >
-                {({ values, setFieldValue, errors, touched }) => (
-                    <Form className="max-w-5xl mx-auto space-y-6">
+        <div className="min-h-screen bg-gray-50 pb-20">
+            {/* Header / Hero */}
+            <div className="relative bg-gradient-to-r from-violet-600 to-fuchsia-600 pb-24 pt-12 shadow-xl">
+                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-white/10 blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 rounded-full bg-black/10 blur-3xl"></div>
 
-                        {/* ======= THÔNG TIN BÀI THI ======= */}
-                        <section className="bg-white rounded-2xl shadow p-8">
-                            <h2 className="text-2xl font-semibold text-center mb-8">
-                                Cập nhật bài thi - Admin
-                            </h2>
+                <div className="container mx-auto px-4 relative z-10">
+                    <button
+                        onClick={() => router.back()}
+                        className="flex items-center text-white/80 hover:text-white mb-6 transition-colors"
+                    >
+                        <ArrowLeftIcon className="w-5 h-5 mr-2" />
+                        Quay lại danh sách
+                    </button>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Tên bài thi */}
-                                <div className="col-span-2">
-                                    <label className="block text-sm font-medium mb-1">Tên bài thi</label>
-                                    <Field
-                                        name="title"
-                                        className="w-full border px-3 py-2 rounded-md"
-                                        placeholder="Nhập tên bài thi"
-                                    />
-                                    <ErrorMessage name="title" component="div" className="text-red-500 text-xs mt-1" />
-                                </div>
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl">
+                            <PencilSquareIcon className="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-bold text-white">Chỉnh sửa bài thi</h1>
+                            <p className="text-violet-100 mt-1">Cập nhật thông tin và nội dung câu hỏi</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                                {/* Danh mục */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Danh mục</label>
-                                    <Field
-                                        as="select"
-                                        name="categoryId"
-                                        className="w-full border px-3 py-2 rounded-md bg-white"
-                                    >
-                                        <option value="">Chọn danh mục</option>
-                                        {categories.map((c) => (
-                                            <option key={c.id} value={c.id}>
-                                                {c.name}
-                                            </option>
-                                        ))}
-                                    </Field>
-                                    <ErrorMessage name="categoryId" component="div" className="text-red-500 text-xs mt-1" />
-                                </div>
+            <div className="container mx-auto px-4 -mt-16 relative z-20">
+                <Formik
+                    initialValues={initialValues}
+                    validationSchema={validationSchema}
+                    onSubmit={handleSubmit}
+                    enableReinitialize
+                >
+                    {({ values, setFieldValue, errors, touched }) => (
+                        <Form className="space-y-8 max-w-5xl mx-auto">
 
-                                {/* Loại đề thi / Difficulty */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Loại đề thi</label>
-                                    <Field
-                                        as="select"
-                                        name="examLevel"
-                                        className="w-full border px-3 py-2 rounded-md bg-white"
-                                    >
-                                        <option value="">Chọn độ khó</option>
-                                        {difficultyOptions.map((opt) => (
-                                            <option key={opt.id} value={opt.id}>
-                                                {opt.name}
-                                            </option>
-                                        ))}
-                                    </Field>
-                                    <ErrorMessage name="examLevel" component="div" className="text-red-500 text-xs mt-1" />
-                                </div>
+                            {/* Card: Thông tin cơ bản */}
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                                <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                    <span className="w-1.5 h-6 bg-violet-600 rounded-full"></span>
+                                    Thông tin chung
+                                </h2>
 
-                                {/* Thời gian làm bài */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Thời gian (phút)</label>
-                                    <Field
-                                        type="number"
-                                        name="durationMinutes"
-                                        className="w-full border px-3 py-2 rounded-md"
-                                    />
-                                    <ErrorMessage name="durationMinutes" component="div" className="text-red-500 text-xs mt-1" />
-                                </div>
-
-                                {/* Thời gian bắt đầu */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Bắt đầu</label>
-                                    <div className="flex gap-2">
-                                        <Field type="time" name="startTime" className="border px-2 py-1 rounded-md" />
-                                        <Field type="date" name="startDate" className="border px-2 py-1 rounded-md" />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Tên bài thi</label>
+                                        <div className="relative">
+                                            <Field
+                                                name="title"
+                                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
+                                                placeholder="Nhập tên bài thi..."
+                                            />
+                                            <PencilSquareIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
+                                        <ErrorMessage name="title" component="div" className="text-red-500 text-xs mt-1 ml-1" />
                                     </div>
-                                </div>
 
-                                {/* Thời gian kết thúc */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Kết thúc</label>
-                                    <div className="flex gap-2">
-                                        <Field type="time" name="endTime" className="border px-2 py-1 rounded-md" />
-                                        <Field type="date" name="endDate" className="border px-2 py-1 rounded-md" />
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Danh mục</label>
+                                        <div className="relative">
+                                            <Field
+                                                as="select"
+                                                name="categoryId"
+                                                className="w-full pl-10 pr-10 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all appearance-none cursor-pointer"
+                                            >
+                                                <option value="">Chọn danh mục</option>
+                                                {categories.map((c) => (
+                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                ))}
+                                            </Field>
+                                            <TagIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
+                                        <ErrorMessage name="categoryId" component="div" className="text-red-500 text-xs mt-1 ml-1" />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Độ khó</label>
+                                        <div className="relative">
+                                            <Field
+                                                as="select"
+                                                name="examLevel"
+                                                className="w-full pl-10 pr-10 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all appearance-none cursor-pointer"
+                                            >
+                                                <option value="">Chọn độ khó</option>
+                                                {difficultyOptions.map((opt) => (
+                                                    <option key={opt.id} value={opt.id}>{opt.name}</option>
+                                                ))}
+                                            </Field>
+                                            <SwatchIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
+                                        <ErrorMessage name="examLevel" component="div" className="text-red-500 text-xs mt-1 ml-1" />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian (phút)</label>
+                                        <div className="relative">
+                                            <Field
+                                                type="number"
+                                                name="durationMinutes"
+                                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
+                                            />
+                                            <ClockIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
+                                        <ErrorMessage name="durationMinutes" component="div" className="text-red-500 text-xs mt-1 ml-1" />
+                                    </div>
+
+                                    <div className="hidden md:block"></div> {/* Spacer */}
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Bắt đầu</label>
+                                        <div className="flex gap-3">
+                                            <div className="relative flex-1">
+                                                <Field type="time" name="startTime" className="w-full pl-3 pr-3 py-3 border border-gray-200 rounded-xl focus:border-violet-500 outline-none" />
+                                            </div>
+                                            <div className="relative flex-1">
+                                                <Field type="date" name="startDate" className="w-full pl-3 pr-3 py-3 border border-gray-200 rounded-xl focus:border-violet-500 outline-none" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Kết thúc</label>
+                                        <div className="flex gap-3">
+                                            <div className="relative flex-1">
+                                                <Field type="time" name="endTime" className="w-full pl-3 pr-3 py-3 border border-gray-200 rounded-xl focus:border-violet-500 outline-none" />
+                                            </div>
+                                            <div className="relative flex-1">
+                                                <Field type="date" name="endDate" className="w-full pl-3 pr-3 py-3 border border-gray-200 rounded-xl focus:border-violet-500 outline-none" />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </section>
 
-                        {/* ======= DANH SÁCH CÂU HỎI ======= */}
-                        <FieldArray name="questions">
-                            {({ push, remove }) => (
-                                <div className="space-y-6">
-                                    <div className="flex justify-between items-center">
-                                        <h3 className="text-xl font-semibold">Danh sách câu hỏi</h3>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setOpenLibrary(true);
-                                                handleSearchLibrary(); // Load initial
-                                            }}
-                                            className="px-5 py-2 border-2 border-[#A53AEC] text-[#A53AEC] bg-white rounded-full hover:bg-purple-50"
-                                        >
-                                            Thư viện câu hỏi
-                                        </button>
-                                    </div>
+                            {/* Card: Danh sách câu hỏi */}
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                        <span className="w-1.5 h-6 bg-fuchsia-600 rounded-full"></span>
+                                        Nội dung bài thi
+                                    </h2>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setOpenLibrary(true);
+                                            handleSearchLibrary();
+                                            setSelectedQuestions([]);
+                                        }}
+                                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-violet-50 text-violet-700 rounded-xl hover:bg-violet-100 transition-colors font-medium border border-violet-100"
+                                    >
+                                        <BookOpenIcon className="w-5 h-5" />
+                                        Thêm từ thư viện
+                                    </button>
+                                </div>
 
-                                    {values.questions.map((q, qIndex) => (
-                                        <section key={qIndex} className={`bg-white rounded-2xl shadow p-8 relative ${q.isReadOnly ? 'border-2 border-gray-200 bg-gray-50' : ''}`}>
-                                            <div className="flex justify-between items-center mb-4">
-                                                <h3 className="text-lg font-semibold">
-                                                    Câu hỏi {qIndex + 1} {q.isReadOnly && <span className="text-xs bg-gray-200 px-2 py-1 rounded ml-2">Thư viện</span>}
-                                                </h3>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => remove(qIndex)}
-                                                    className="text-red-500 hover:bg-red-50 p-2 rounded"
+                                <FieldArray name="questions">
+                                    {({ push, remove }) => (
+                                        <div className="space-y-6">
+                                            {values.questions.map((q, qIndex) => (
+                                                <div
+                                                    key={qIndex}
+                                                    className={`
+                                                        relative rounded-2xl border p-6 transition-all group
+                                                        ${q.isReadOnly ? 'bg-gray-50 border-gray-200 border-dashed' : 'bg-white border-gray-200 hover:border-violet-200 hover:shadow-md'}
+                                                    `}
                                                 >
-                                                    Xóa câu hỏi
-                                                </button>
-                                            </div>
+                                                    <div className="flex justify-between items-start mb-6">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-bold text-sm">
+                                                                {qIndex + 1}
+                                                            </span>
+                                                            <div className="flex flex-col">
+                                                                <h3 className="font-semibold text-gray-800">
+                                                                    {q.isReadOnly ? 'Câu hỏi thư viện' : 'Câu hỏi tự soạn'}
+                                                                </h3>
+                                                                {q.isReadOnly && (
+                                                                    <span className="text-xs text-gray-500">ID: {q.id} • {q.difficulty}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => remove(qIndex)}
+                                                            className="text-gray-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                                                            title="Xóa câu hỏi"
+                                                        >
+                                                            <TrashIcon className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                                {/* Tiêu đề câu hỏi */}
-                                                <div className="col-span-2">
-                                                    <Field
-                                                        name={`questions.${qIndex}.title`}
-                                                        placeholder="Nhập câu hỏi..."
-                                                        disabled={q.isReadOnly}
-                                                        className={`w-full border px-3 py-2 rounded-md ${q.isReadOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                                    />
-                                                    <ErrorMessage
-                                                        name={`questions.${qIndex}.title`}
-                                                        component="div"
-                                                        className="text-red-500 text-xs mt-1"
-                                                    />
-                                                </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
+                                                        <div className="md:col-span-12">
+                                                            <Field
+                                                                name={`questions.${qIndex}.title`}
+                                                                placeholder="Nhập nội dung câu hỏi..."
+                                                                disabled={q.isReadOnly}
+                                                                // Use text display for readOnly to look better
+                                                                className={`w-full px-4 py-3 border rounded-xl outline-none focus:border-violet-500 transition-all ${q.isReadOnly ? 'bg-transparent border-transparent px-0 font-medium text-lg' : 'bg-gray-50 border-gray-200'}`}
+                                                            />
+                                                            <ErrorMessage name={`questions.${qIndex}.title`} component="div" className="text-red-500 text-xs mt-1" />
+                                                        </div>
 
-                                                {/* Loại câu hỏi */}
-                                                <div>
-                                                    <Field
-                                                        as="select"
-                                                        name={`questions.${qIndex}.type`}
-                                                        disabled={q.isReadOnly}
-                                                        className={`w-full border px-3 py-2 rounded-md bg-white ${q.isReadOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                                                            const newType = e.target.value;
-                                                            setFieldValue(`questions.${qIndex}.type`, newType);
-                                                            if (newType === 'TRUE_FALSE') {
-                                                                setFieldValue(`questions.${qIndex}.answers`, [
-                                                                    { text: "Đúng", isCorrect: false },
-                                                                    { text: "Sai", isCorrect: false }
-                                                                ]);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <option value="SINGLE">Chọn 1 đáp án</option>
-                                                        <option value="MULTIPLE">Chọn nhiều đáp án</option>
-                                                        <option value="TRUE_FALSE">Đúng/Sai</option>
-                                                    </Field>
-                                                </div>
+                                                        {!q.isReadOnly && (
+                                                            <>
+                                                                <div className="md:col-span-6">
+                                                                    <label className="text-xs font-medium text-gray-500 mb-1 block">Loại câu hỏi</label>
+                                                                    <Field
+                                                                        as="select"
+                                                                        name={`questions.${qIndex}.type`}
+                                                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-violet-500 bg-white"
+                                                                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                                                                            const newType = e.target.value;
+                                                                            setFieldValue(`questions.${qIndex}.type`, newType);
+                                                                            if (newType === 'TRUE_FALSE') {
+                                                                                setFieldValue(`questions.${qIndex}.answers`, [
+                                                                                    { text: "Đúng", isCorrect: false },
+                                                                                    { text: "Sai", isCorrect: false }
+                                                                                ]);
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <option value="SINGLE">Chọn 1 đáp án</option>
+                                                                        <option value="MULTIPLE">Chọn nhiều đáp án</option>
+                                                                        <option value="TRUE_FALSE">Đúng/Sai</option>
+                                                                    </Field>
+                                                                </div>
 
-                                                {/* Độ khó */}
-                                                <div>
-                                                    <Field
-                                                        as="select"
-                                                        name={`questions.${qIndex}.difficulty`}
-                                                        disabled={q.isReadOnly}
-                                                        className={`w-full border px-3 py-2 rounded-md bg-white ${q.isReadOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                                    >
-                                                        <option value="EASY">Dễ</option>
-                                                        <option value="MEDIUM">Trung bình</option>
-                                                        <option value="HARD">Khó</option>
-                                                    </Field>
-                                                </div>
-                                            </div>
+                                                                <div className="md:col-span-6">
+                                                                    <label className="text-xs font-medium text-gray-500 mb-1 block">Độ khó</label>
+                                                                    <Field
+                                                                        as="select"
+                                                                        name={`questions.${qIndex}.difficulty`}
+                                                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-violet-500 bg-white"
+                                                                    >
+                                                                        <option value="EASY">Dễ</option>
+                                                                        <option value="MEDIUM">Trung bình</option>
+                                                                        <option value="HARD">Khó</option>
+                                                                    </Field>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
 
-                                            {/* Danh sách đáp án */}
-                                            <FieldArray name={`questions.${qIndex}.answers`}>
-                                                {({ push: pushAnswer, remove: removeAnswer }) => (
-                                                    <div className="space-y-3">
-                                                        {q.answers.map((a, aIndex) => (
-                                                            <div key={aIndex} className="flex items-center gap-3">
-                                                                <Field
-                                                                    type={q.type === "MULTIPLE" ? "checkbox" : "radio"}
-                                                                    name={`questions.${qIndex}.answers.${aIndex}.isCorrect`}
-                                                                    checked={a.isCorrect}
-                                                                    disabled={q.isReadOnly}
-                                                                    onChange={() => {
-                                                                        if (q.isReadOnly) return;
-                                                                        if (q.type === "SINGLE" || q.type === "TRUE_FALSE") {
-                                                                            // Reset others
-                                                                            q.answers.forEach((_, idx) => {
-                                                                                setFieldValue(
-                                                                                    `questions.${qIndex}.answers.${idx}.isCorrect`,
-                                                                                    idx === aIndex
-                                                                                );
-                                                                            });
-                                                                        } else {
-                                                                            setFieldValue(
-                                                                                `questions.${qIndex}.answers.${aIndex}.isCorrect`,
-                                                                                !a.isCorrect
-                                                                            );
-                                                                        }
-                                                                    }}
-                                                                    className="w-5 h-5"
-                                                                />
-                                                                <Field
-                                                                    name={`questions.${qIndex}.answers.${aIndex}.text`}
-                                                                    placeholder={`Đáp án ${aIndex + 1}`}
-                                                                    disabled={q.isReadOnly || q.type === "TRUE_FALSE"}
-                                                                    className={`flex-1 border px-3 py-2 rounded-md ${q.isReadOnly || q.type === "TRUE_FALSE" ? 'bg-gray-100' : ''}`}
-                                                                />
+                                                    <FieldArray name={`questions.${qIndex}.answers`}>
+                                                        {({ push: pushAnswer, remove: removeAnswer }) => (
+                                                            <div className="space-y-3 pl-4 border-l-2 border-gray-100">
+                                                                {q.answers.map((a, aIndex) => (
+                                                                    <div key={aIndex} className="flex items-center gap-3 group/answer">
+                                                                        <div className="relative flex items-center justify-center">
+                                                                            <Field
+                                                                                type={q.type === "MULTIPLE" ? "checkbox" : "radio"}
+                                                                                name={`questions.${qIndex}.answers.${aIndex}.isCorrect`}
+                                                                                checked={a.isCorrect}
+                                                                                disabled={q.isReadOnly}
+                                                                                onChange={() => {
+                                                                                    if (q.isReadOnly) return;
+                                                                                    if (q.type === "SINGLE" || q.type === "TRUE_FALSE") {
+                                                                                        q.answers.forEach((_, idx) => {
+                                                                                            setFieldValue(
+                                                                                                `questions.${qIndex}.answers.${idx}.isCorrect`,
+                                                                                                idx === aIndex
+                                                                                            );
+                                                                                        });
+                                                                                    } else {
+                                                                                        setFieldValue(
+                                                                                            `questions.${qIndex}.answers.${aIndex}.isCorrect`,
+                                                                                            !a.isCorrect
+                                                                                        );
+                                                                                    }
+                                                                                }}
+                                                                                className="peer w-5 h-5 cursor-pointer accent-violet-600"
+                                                                            />
+                                                                        </div>
+
+                                                                        <Field
+                                                                            name={`questions.${qIndex}.answers.${aIndex}.text`}
+                                                                            placeholder={`Đáp án ${aIndex + 1}`}
+                                                                            disabled={q.isReadOnly || q.type === "TRUE_FALSE"}
+                                                                            className={`flex-1 px-3 py-2 rounded-lg outline-none transition-all ${a.isCorrect ? 'bg-green-50 text-green-700 font-medium border-green-200 border' : 'bg-gray-50 border border-transparent'
+                                                                                }`}
+                                                                        />
+
+                                                                        {!q.isReadOnly && q.type !== "TRUE_FALSE" && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => removeAnswer(aIndex)}
+                                                                                className="opacity-0 group-hover/answer:opacity-100 text-gray-400 hover:text-red-500 transition-all p-1"
+                                                                            >
+                                                                                <TrashIcon className="w-4 h-4" />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+
                                                                 {!q.isReadOnly && q.type !== "TRUE_FALSE" && (
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => removeAnswer(aIndex)}
-                                                                        className="text-gray-400 hover:text-red-500"
+                                                                        onClick={() => pushAnswer({ text: "", isCorrect: false })}
+                                                                        className="text-sm text-violet-600 hover:text-violet-700 font-medium flex items-center gap-1 mt-2 px-2 py-1 rounded-md hover:bg-violet-50 transition-colors w-fit"
                                                                     >
-                                                                        🗑
+                                                                        <PlusCircleIcon className="w-4 h-4" />
+                                                                        Thêm đáp án
                                                                     </button>
                                                                 )}
                                                             </div>
-                                                        ))}
-                                                        <ErrorMessage name={`questions.${qIndex}.answers`}>
-                                                            {(msg) => typeof msg === 'string' ? <div className="text-red-500 text-xs">{msg}</div> : null}
-                                                        </ErrorMessage>
-
-                                                        {!q.isReadOnly && q.type !== "TRUE_FALSE" && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => pushAnswer({ text: "", isCorrect: false })}
-                                                                className="text-sm text-purple-600 border border-purple-600 px-3 py-1 rounded hover:bg-purple-50"
-                                                            >
-                                                                + Thêm đáp án
-                                                            </button>
                                                         )}
-                                                    </div>
-                                                )}
-                                            </FieldArray>
-                                        </section>
-                                    ))}
+                                                    </FieldArray>
+                                                </div>
+                                            ))}
 
-                                    {/* Add Question Button */}
-                                    <div className="flex justify-center mt-6">
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                push({
-                                                    title: "",
-                                                    type: "SINGLE",
-                                                    difficulty: "EASY",
-                                                    categoryId: values.categoryId,
-                                                    answers: [
-                                                        { text: "", isCorrect: false },
-                                                        { text: "", isCorrect: false },
-                                                    ],
-                                                })
-                                            }
-                                            className="px-6 py-2 rounded-full bg-purple-600 text-white hover:bg-purple-700 shadow-md transition-all hover:scale-105"
-                                        >
-                                            + Thêm câu hỏi
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </FieldArray>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    push({
+                                                        title: "",
+                                                        type: "SINGLE",
+                                                        difficulty: "EASY",
+                                                        categoryId: values.categoryId,
+                                                        answers: [
+                                                            { text: "", isCorrect: false },
+                                                            { text: "", isCorrect: false },
+                                                        ],
+                                                    })
+                                                }
+                                                className="w-full py-4 border-2 border-dashed border-gray-300 rounded-2xl text-gray-500 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50 transition-all flex flex-col items-center justify-center gap-2"
+                                            >
+                                                <PlusCircleIcon className="w-8 h-8 opacity-50" />
+                                                <span className="font-medium">Thêm câu hỏi mới</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </FieldArray>
+                            </div>
 
-                        {/* ======= ACTIONS ======= */}
-                        <div className="flex justify-end gap-4 mt-8 pb-10">
-                            <button
-                                type="button"
-                                onClick={() => router.back()}
-                                className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                            >
-                                Hủy
-                            </button>
-                            <button
-                                type="submit"
-                                onClick={() => setSubmitAction('DRAFT')}
-                                className="px-6 py-2 border border-purple-700 text-purple-700 font-medium rounded-lg hover:bg-purple-50 transition"
-                            >
-                                Lưu nháp
-                            </button>
-                            <button
-                                type="submit"
-                                onClick={() => setSubmitAction('PUBLISHED')}
-                                className="px-6 py-2 bg-purple-700 hover:bg-purple-800 text-white font-medium rounded-lg transition shadow-md"
-                            >
-                                Đăng bài
-                            </button>
-                        </div>
-
-                        {/* ================== MODAL THƯ VIỆN ================== */}
-                        {openLibrary && (
-                            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                                <div className="bg-white rounded-xl p-6 relative w-[95%] max-w-[1000px] min-h-[80vh] max-h-[90vh] flex flex-col">
+                            {/* Actions Footer */}
+                            <div className="sticky bottom-4 z-30 bg-white/80 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl p-4 flex justify-between items-center max-w-5xl mx-auto">
+                                <span className="text-sm text-gray-500 ml-2">
+                                    {values.questions.length} câu hỏi
+                                </span>
+                                <div className="flex gap-3">
                                     <button
                                         type="button"
-                                        onClick={() => setOpenLibrary(false)}
-                                        className="absolute top-3 right-4 text-gray-500 text-lg hover:text-black"
+                                        onClick={() => router.back()}
+                                        className="px-6 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
                                     >
-                                        x
+                                        Hủy bỏ
                                     </button>
-
-                                    <h2 className="text-xl font-semibold mb-4">Thư viện câu hỏi</h2>
-
-                                    {/* Filter */}
-                                    <div className="flex flex-wrap gap-3 mb-4 items-center">
-                                        <input
-                                            placeholder="Nhập tiêu đề..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="flex-1 h-[40px] rounded-full border border-gray-300 px-4 text-sm"
-                                        />
-                                        <select
-                                            value={searchDifficulty}
-                                            onChange={(e) => setSearchDifficulty(e.target.value)}
-                                            className="h-[40px] px-4 rounded-full border border-gray-300 text-sm"
-                                        >
-                                            <option value="">Tất cả độ khó</option>
-                                            <option value="EASY">Dễ</option>
-                                            <option value="MEDIUM">Trung bình</option>
-                                            <option value="HARD">Khó</option>
-                                        </select>
-                                        <select
-                                            value={searchType}
-                                            onChange={(e) => setSearchType(e.target.value)}
-                                            className="h-[40px] px-4 rounded-full border border-gray-300 text-sm"
-                                        >
-                                            <option value="">Tất cả loại</option>
-                                            <option value="SINGLE">Một đáp án</option>
-                                            <option value="MULTIPLE">Nhiều đáp án</option>
-                                            <option value="TRUE_FALSE">Đúng/Sai</option>
-                                        </select>
-                                        <button
-                                            type="button"
-                                            onClick={handleSearchLibrary}
-                                            className="bg-[#A53AEC] text-white px-5 py-2 rounded-full text-sm"
-                                        >
-                                            Tìm kiếm
-                                        </button>
-                                    </div>
-
-                                    {/* Table */}
-                                    <div className="flex-1 overflow-auto border border-gray-200 rounded-lg">
-                                        <table className="w-full border-collapse text-left text-sm">
-                                            <thead className="bg-gray-50 sticky top-0">
-                                                <tr>
-                                                    <th className="p-3 border-b w-10">#</th>
-                                                    <th className="p-3 border-b">Tiêu đề</th>
-                                                    <th className="p-3 border-b">Danh mục</th>
-                                                    <th className="p-3 border-b">Loại</th>
-                                                    <th className="p-3 border-b">Độ khó</th>
-                                                    <th className="p-3 border-b">Đáp án</th>
-                                                    <th className="p-3 border-b">Người tạo</th>
-                                                    <th className="p-3 border-b text-center">Thao tác</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {libraryQuestions
-                                                    .filter(q => !values.questions.some(cq => cq.id === q.id))
-                                                    .map((q, index) => (
-                                                        <tr key={q.id} className="hover:bg-gray-50">
-                                                            <td className="p-3 border-b text-center">{index + 1}</td>
-                                                            <td className="p-3 border-b font-medium max-w-[200px] truncate" title={q.title}>{q.title}</td>
-                                                            <td className="p-3 border-b">{q.categoryName || "-"}</td>
-                                                            <td className="p-3 border-b">
-                                                                {q.type === "SINGLE" ? "Một đáp án" : "Nhiều đáp án"}
-                                                            </td>
-                                                            <td className="p-3 border-b">
-                                                                <span className={`px-2 py-1 rounded text-xs ${q.difficulty === "EASY" ? "bg-green-100 text-green-700" :
-                                                                    q.difficulty === "MEDIUM" ? "bg-yellow-100 text-yellow-700" :
-                                                                        "bg-red-100 text-red-700"
-                                                                    }`}>
-                                                                    {q.difficulty === "EASY" ? "Dễ" : q.difficulty === "MEDIUM" ? "TB" : "Khó"}
-                                                                </span>
-                                                            </td>
-                                                            <td className="p-3 border-b max-w-[250px]">
-                                                                <ul className="list-disc list-inside text-xs text-gray-600">
-                                                                    {q.answers.map((a, idx) => (
-                                                                        <li key={idx} className={a.isCorrect ? "text-green-600 font-medium" : ""}>
-                                                                            {a.text}
-                                                                        </li>
-                                                                    ))}
-                                                                </ul>
-                                                            </td>
-                                                            <td className="p-3 border-b text-gray-500 text-xs">{q.createdBy || "Unknown"}</td>
-                                                            <td className="p-3 border-b text-center">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        // Add to form
-                                                                        const currentQuestions = values.questions;
-                                                                        // Check if exists
-                                                                        if (currentQuestions.some(cq => cq.id === q.id)) {
-                                                                            toastError("Câu hỏi này đã có trong bài thi.");
-                                                                            return;
-                                                                        }
-                                                                        setFieldValue("questions", [...currentQuestions, q]);
-                                                                        toastSuccess("Đã thêm câu hỏi.");
-                                                                    }}
-                                                                    className="text-purple-600 hover:underline font-medium"
-                                                                >
-                                                                    Thêm
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                {libraryQuestions.length === 0 && (
-                                                    <tr>
-                                                        <td colSpan={8} className="p-10 text-center text-gray-500">
-                                                            Không tìm thấy câu hỏi nào.
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <button
+                                        type="submit"
+                                        onClick={() => setSubmitAction('DRAFT')}
+                                        className="px-6 py-2.5 rounded-xl border border-violet-200 text-violet-700 bg-violet-50 font-medium hover:bg-violet-100 transition-colors"
+                                    >
+                                        Lưu nháp
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        onClick={() => setSubmitAction('PUBLISHED')}
+                                        className="px-8 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold shadow-lg shadow-violet-200 hover:shadow-xl hover:scale-[1.02] transition-all"
+                                    >
+                                        Cập nhật & Đăng
+                                    </button>
                                 </div>
                             </div>
-                        )}
-                    </Form>
-                )}
-            </Formik>
-        </div >
+
+                            {/* Library Modal - Redesigned */}
+                            {openLibrary && typeof window !== 'undefined' && createPortal(
+                                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+                                    <div className="bg-white rounded-3xl w-full max-w-4xl h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+
+                                        {/* Modal Header */}
+                                        <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
+                                            <div>
+                                                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                                                    <BookOpenIcon className="w-7 h-7 text-violet-600" />
+                                                    Thư viện câu hỏi
+                                                </h2>
+                                                <p className="text-gray-500 mt-1">Chọn câu hỏi từ ngân hàng để thêm vào bài thi</p>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex bg-gray-100 p-1 rounded-xl">
+                                                    <button
+                                                        onClick={() => setViewMode('grid')}
+                                                        className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-violet-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                                    >
+                                                        <Squares2X2Icon className="w-5 h-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setViewMode('list')}
+                                                        className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-violet-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                                    >
+                                                        <ListBulletIcon className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setOpenLibrary(false)}
+                                                    className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                                                >
+                                                    <XMarkIcon className="w-8 h-8" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Search & Filter Bar */}
+                                        <div className="px-8 py-4 bg-gray-50/50 border-b border-gray-100 shrink-0 space-y-4">
+                                            <div className="flex flex-col md:flex-row gap-4">
+                                                <div className="relative flex-1">
+                                                    <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                                                    <input
+                                                        placeholder="Tìm kiếm câu hỏi..."
+                                                        value={searchQuery}
+                                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleSearchLibrary()}
+                                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all shadow-sm"
+                                                    />
+                                                </div>
+                                                <div className="relative w-full md:w-64 shrink-0">
+                                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                        <FolderIcon className="h-5 w-5 text-gray-400" />
+                                                    </div>
+                                                    <select
+                                                        value={searchCategory}
+                                                        onChange={(e) => setSearchCategory(e.target.value)}
+                                                        className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none appearance-none cursor-pointer hover:border-violet-300 transition-all shadow-sm truncate"
+                                                    >
+                                                        <option value="">Tất cả danh mục</option>
+                                                        {categories.map((cat) => (
+                                                            <option key={cat.id} value={cat.id}>
+                                                                {cat.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                        <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSearchLibrary}
+                                                    className="px-8 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-colors shadow-lg shadow-violet-200 shrink-0"
+                                                >
+                                                    Tìm kiếm
+                                                </button>
+                                            </div>
+
+                                            {/* Advanced Filters */}
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+
+                                                    {/* Difficulty Filters */}
+                                                    <div className="flex items-center bg-white rounded-lg p-1 border border-gray-200 shadow-sm shrink-0">
+                                                        <span className="text-xs font-semibold text-gray-500 px-2 uppercase">Độ khó</span>
+                                                        <div className="w-px h-4 bg-gray-200 mx-1"></div>
+                                                        {['Easy', 'Medium', 'Hard'].map((diff) => (
+                                                            <button
+                                                                key={diff}
+                                                                type="button"
+                                                                onClick={() => setSearchDifficulty(searchDifficulty === diff.toUpperCase() ? '' : diff.toUpperCase())}
+                                                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ml-1 ${searchDifficulty === diff.toUpperCase()
+                                                                    ? diff === 'Easy' ? 'bg-green-100 text-green-700 ring-1 ring-green-500' :
+                                                                        diff === 'Medium' ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-500' :
+                                                                            'bg-red-100 text-red-700 ring-1 ring-red-500'
+                                                                    : 'text-gray-500 hover:bg-gray-50'
+                                                                    }`}
+                                                            >
+                                                                {diff === 'Easy' ? 'Dễ' : diff === 'Medium' ? 'Trung bình' : 'Khó'}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Type Filters */}
+                                                    <div className="flex items-center bg-white rounded-lg p-1 border border-gray-200 shadow-sm shrink-0">
+                                                        <span className="text-xs font-semibold text-gray-500 px-2 uppercase">Loại</span>
+                                                        <div className="w-px h-4 bg-gray-200 mx-1"></div>
+                                                        {['SINGLE', 'MULTIPLE', 'TRUE_FALSE'].map((type) => (
+                                                            <button
+                                                                key={type}
+                                                                type="button"
+                                                                onClick={() => setSearchType(searchType === type ? '' : type)}
+                                                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ml-1 ${searchType === type
+                                                                    ? 'bg-violet-100 text-violet-700 ring-1 ring-violet-500'
+                                                                    : 'text-gray-500 hover:bg-gray-50'
+                                                                    }`}
+                                                            >
+                                                                {type === 'SINGLE' ? 'Đơn' : type === 'MULTIPLE' ? 'Nhiều' : 'Đ/S'}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="flex-1"></div>
+
+                                                    {selectedQuestions.length > 0 && (
+                                                        <button
+                                                            onClick={() => setSelectedQuestions([])}
+                                                            className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors whitespace-nowrap"
+                                                        >
+                                                            Bỏ chọn ({selectedQuestions.length})
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Content Body */}
+                                        <div className="flex-1 overflow-y-auto p-8 bg-gray-50">
+                                            {libraryQuestions.length === 0 ? (
+                                                <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
+                                                    <MagnifyingGlassIcon className="w-24 h-24 mb-4" />
+                                                    <p className="text-xl font-medium">Không tìm thấy câu hỏi nào</p>
+                                                    <p className="text-sm">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+                                                </div>
+                                            ) : (
+                                                <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" : "space-y-4"}>
+                                                    {libraryQuestions
+                                                        .filter(q => !values.questions.some(cq => cq.id === q.id))
+                                                        .map((q) => {
+                                                            const isSelected = selectedQuestions.some(sq => sq.id === q.id);
+                                                            return (
+                                                                <div
+                                                                    key={q.id}
+                                                                    onClick={() => toggleQuestionSelection(q)}
+                                                                    className={`
+                                                                        relative group cursor-pointer bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden
+                                                                        ${isSelected
+                                                                            ? 'border-violet-500 shadow-lg shadow-violet-100 ring-2 ring-violet-500/20'
+                                                                            : 'border-transparent shadow-sm hover:shadow-md hover:border-violet-200'
+                                                                        }
+                                                                        ${viewMode === 'list' ? 'flex items-center p-4 gap-6' : 'flex flex-col p-6'}
+                                                                    `}
+                                                                >
+                                                                    {/* Selection Checkbox overlay */}
+                                                                    <div className={`absolute top-4 right-4 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-violet-600 border-violet-600' : 'border-gray-300 bg-white'}`}>
+                                                                        {isSelected && <CheckIcon className="w-4 h-4 text-white" />}
+                                                                    </div>
+
+                                                                    {/* Badges */}
+                                                                    <div className={`flex gap-2 mb-4 ${viewMode === 'list' ? 'mb-0 w-48 shrink-0 flex-col gap-1' : ''}`}>
+                                                                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold w-fit ${q.difficulty === 'EASY' ? 'bg-green-100 text-green-700' :
+                                                                            q.difficulty === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                                                                                'bg-red-100 text-red-700'
+                                                                            }`}>
+                                                                            {q.difficulty === "EASY" ? "Dễ" : q.difficulty === "MEDIUM" ? "Trung bình" : "Khó"}
+                                                                        </span>
+                                                                        <span className="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 text-xs font-bold w-fit">
+                                                                            {q.type === "SINGLE" ? "Đơn" : q.type === "MULTIPLE" ? "Đa" : "Đ/S"}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    {/* Content */}
+                                                                    <div className="flex-1">
+                                                                        <div className="flex justify-between items-start gap-2 mb-2">
+                                                                            <h3 className="font-bold text-gray-800 line-clamp-3 group-hover:text-violet-700 transition-colors">
+                                                                                {q.title}
+                                                                            </h3>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setDetailQuestion(q);
+                                                                                }}
+                                                                                className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors shrink-0"
+                                                                                title="Xem chi tiết"
+                                                                            >
+                                                                                <EyeIcon className="w-5 h-5" />
+                                                                            </button>
+                                                                        </div>
+                                                                        <p className="text-xs text-gray-500">
+                                                                            {q.categoryName || "Chưa phân loại"} • {q.createdBy || "System"}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Footer Actions */}
+                                        <div className="p-6 bg-white border-t border-gray-100 flex justify-between items-center shrink-0">
+                                            <div className="text-sm font-medium text-gray-600">
+                                                Đã chọn: <span className="text-violet-600 font-bold text-lg">{selectedQuestions.length}</span> câu hỏi
+                                            </div>
+                                            <div className="flex gap-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setOpenLibrary(false)}
+                                                    className="px-6 py-2.5 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition-colors"
+                                                >
+                                                    Đóng
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={selectedQuestions.length === 0}
+                                                    onClick={() => {
+                                                        const currentQuestions = values.questions;
+                                                        // Filter out dupes just in case
+                                                        const newQuestions = selectedQuestions.filter(sq => !currentQuestions.some(cq => cq.id === sq.id));
+                                                        setFieldValue("questions", [...currentQuestions, ...newQuestions]);
+                                                        toastSuccess(`Đã thêm ${newQuestions.length} câu hỏi vào bài thi!`);
+                                                        setSelectedQuestions([]);
+                                                        setOpenLibrary(false);
+                                                    }}
+                                                    className="px-8 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold shadow-lg shadow-violet-200 hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-all"
+                                                >
+                                                    Thêm vào bài thi
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>,
+                                document.body
+                            )}
+
+                        </Form>
+                    )}
+                </Formik>
+                {/* Detail Modal */}
+                <QuestionDetailModal
+                    question={detailQuestion}
+                    onClose={() => setDetailQuestion(null)}
+                />
+            </div>
+        </div>
     );
 }
