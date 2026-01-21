@@ -537,6 +537,21 @@ const ExamCardOffline = ({ exam, openMenu, setOpenMenu, onDelete, onShare, route
 }
 
 const ExamCardOnline = ({ exam, openMenu, setOpenMenu, onDelete, router, setOnlineExams, isFinished, categories = [] }: any) => {
+
+    const handleStartExam = async (e: any) => {
+        e.stopPropagation();
+        try {
+            await fetchApi(`/online-exams/${exam.id}/start`, { method: 'POST' });
+            // Update local state first (optional but good for UI consistency if nav is delayed)
+            setOnlineExams((prev: any[]) => prev.map((ex: any) => ex.id === exam.id ? { ...ex, status: 'WAITING' } : ex));
+            toastSuccess("Đã mở phòng chờ thành công!");
+            // Redirect immediately
+            router.push(`/admin/waiting-room/${exam.accessCode}`);
+        } catch (error: any) {
+            toastError(error.message || "Không thể mở phòng chờ");
+        }
+    };
+
     return (
         <div className={`bg-white rounded-2xl border-2 p-5 shadow-sm hover:shadow-lg transition-all relative flex flex-col justify-between h-full ${exam.status === 'IN_PROGRESS' ? 'border-green-400 shadow-green-100' : (exam.status === 'WAITING' ? 'border-sky-400 shadow-sky-100' : 'border-zinc-100')}`}>
             <div className="mb-4">
@@ -568,16 +583,23 @@ const ExamCardOnline = ({ exam, openMenu, setOpenMenu, onDelete, router, setOnli
                 </div>
                 <div className="flex items-center gap-2 text-sm text-zinc-600">
                     <ComputerDesktopIcon className="w-4 h-4 text-zinc-400" />
-                    <span>Online</span>
+                    <span>Online ({exam.actualQuestionCount || 0} câu)</span>
                 </div>
             </div>
 
             {!isFinished && (
-                <div className="mt-auto">
+                <div className="mt-auto flex flex-col gap-2">
                     {exam.status === 'DRAFT' && (
-                        <button onClick={() => router.push(`/admin/exam-online/edit/${exam.id}`)} className="w-full py-2.5 rounded-xl bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 transition-colors shadow-lg shadow-violet-200">
-                            Thêm câu hỏi
-                        </button>
+                        <>
+                            <button onClick={() => router.push(`/admin/exam-online/edit/${exam.id}`)} className="w-full py-2.5 rounded-xl bg-zinc-100 text-zinc-700 font-bold text-sm hover:bg-zinc-200 transition-colors">
+                                {exam.actualQuestionCount > 0 ? "Chỉnh sửa câu hỏi" : "Thêm câu hỏi"}
+                            </button>
+                            {exam.actualQuestionCount > 0 && (
+                                <button onClick={handleStartExam} className="w-full py-2.5 rounded-xl bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 transition-colors shadow-lg shadow-violet-200 flex items-center justify-center gap-2">
+                                    <PlayIcon className="w-4 h-4" /> Mở phòng chờ
+                                </button>
+                            )}
+                        </>
                     )}
                     {exam.status === 'WAITING' && (
                         <button onClick={() => router.push(`/admin/waiting-room/${exam.accessCode}`)} className="w-full py-2.5 rounded-xl bg-sky-500 text-white font-bold text-sm hover:bg-sky-600 transition-colors shadow-lg shadow-sky-200">
