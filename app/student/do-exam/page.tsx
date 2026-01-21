@@ -123,9 +123,19 @@ const DoExamContent = () => {
             setIsSubmitted(true);
             setSecondsLeft(0);
 
+            const minutes = Math.floor(timeSpent / 60);
+            const seconds = timeSpent % 60;
+            const timeText = `${minutes} phút ${seconds} giây`;
+
             await Swal.fire({
                 title: autoSubmit ? "Hết thời gian làm bài" : "Đã nộp bài!",
-                text: `Điểm số: ${result.score} - Số câu đúng: ${result.correctCount}/${result.totalQuestions}`,
+                html: `
+                    <div class="space-y-2">
+                        <p>Điểm số: <b>${result.score}</b></p>
+                        <p>Số câu đúng: <b>${result.correctCount}/${result.totalQuestions}</b></p>
+                        <p>Thời gian làm bài: <b>${timeText}</b></p>
+                    </div>
+                `,
                 icon: "success",
                 confirmButtonColor: "#E33AEC",
             });
