@@ -26,6 +26,7 @@ interface ExamResultDto {
     attemptNumber?: number;
     categoryName?: string;
     timeSpent?: number; // Seconds
+    startedAt?: string;
 }
 
 interface AnswerOption {
@@ -158,8 +159,12 @@ export default function StudentHistoryDetailPage() {
                     {/* Info Row 1 */}
                     <div className="border-b border-gray-300 grid grid-cols-4 divide-x divide-gray-300 bg-[#E5E7EB]">
                         <div className="p-4 text-center">
-                            <span className="block text-sm font-medium mb-1">Thời gian thi:</span>
+                            <span className="block text-sm font-medium mb-1">Ngày thi:</span>
                             <span className="font-bold">{formatDate(history.submittedAt)}</span>
+                        </div>
+                        <div className="p-4 text-center">
+                            <span className="block text-sm font-medium mb-1">Bắt đầu lúc:</span>
+                            <span className="font-bold">{formatTime(history.startedAt || "")}</span>
                         </div>
                         <div className="p-4 text-center">
                             <span className="block text-sm font-medium mb-1">Loại đề thi:</span>
