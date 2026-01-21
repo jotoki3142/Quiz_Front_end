@@ -486,12 +486,12 @@ export default function TeacherExamListPage() {
                                 <div className="absolute right-0 top-8 bg-white shadow-lg rounded-lg py-2 w-40 z-20 border">
                                   <button
                                     onClick={() => {
-                                      router.push(`/teacher/exam-online/update/${exam.id}`);
+                                      router.push(`/teacher/exam-online/edit/${exam.id}`);
                                       setOpenMenu(null);
                                     }}
                                     className="block w-full text-left px-4 py-2 hover:bg-gray-100"
                                   >
-                                    Cập nhật
+                                    Chỉnh sửa
                                   </button>
                                   <button
                                     onClick={async () => {

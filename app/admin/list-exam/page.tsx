@@ -547,7 +547,7 @@ const ExamCardOnline = ({ exam, openMenu, setOpenMenu, onDelete, router, setOnli
                     </button>
                     {openMenu === `online-${exam.id}` && (
                         <div className="absolute right-4 top-12 bg-white shadow-xl ring-1 ring-black/5 rounded-xl py-2 w-48 z-20 animate-in fade-in zoom-in-95">
-                            <button onClick={() => router.push(`/admin/exam-online/update/${exam.id}`)} className="flex w-full items-center px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"><PencilSquareIcon className="w-4 h-4 mr-2" /> Cập nhật</button>
+                            <button onClick={() => router.push(`/admin/exam-online/edit/${exam.id}`)} className="flex w-full items-center px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"><PencilSquareIcon className="w-4 h-4 mr-2" /> Chỉnh sửa</button>
                             <div className="w-full h-px bg-zinc-100 my-1"></div>
                             <button onClick={() => onDelete(exam.id, 'online', exam.name)} className="flex w-full items-center px-4 py-2 text-sm text-rose-600 hover:bg-rose-50"><TrashIcon className="w-4 h-4 mr-2" /> Xóa</button>
                         </div>
@@ -575,7 +575,7 @@ const ExamCardOnline = ({ exam, openMenu, setOpenMenu, onDelete, router, setOnli
             {!isFinished && (
                 <div className="mt-auto">
                     {exam.status === 'DRAFT' && (
-                        <button onClick={() => router.push(`/admin/exam-online/update/${exam.id}`)} className="w-full py-2.5 rounded-xl bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 transition-colors shadow-lg shadow-violet-200">
+                        <button onClick={() => router.push(`/admin/exam-online/edit/${exam.id}`)} className="w-full py-2.5 rounded-xl bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 transition-colors shadow-lg shadow-violet-200">
                             Thêm câu hỏi
                         </button>
                     )}

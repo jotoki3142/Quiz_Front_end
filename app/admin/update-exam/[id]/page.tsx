@@ -19,9 +19,7 @@ import {
     ArrowLeftIcon,
     BookOpenIcon,
     CheckCircleIcon,
-    FunnelIcon,
     XMarkIcon,
-    AdjustmentsHorizontalIcon,
     ListBulletIcon,
     Squares2X2Icon,
     FolderIcon,
@@ -840,7 +838,11 @@ export default function AdminUpdateExamPage() {
                             {/* Actions Footer */}
                             <div className="sticky bottom-4 z-30 bg-white/80 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl p-4 flex justify-between items-center max-w-5xl mx-auto">
                                 <span className="text-sm text-gray-500 ml-2">
-                                    {values.questions.length} câu hỏi
+                                    <span className="font-bold text-gray-800">{values.questions.length} câu hỏi</span>
+                                    <span className="text-gray-400 mx-2">|</span>
+                                    <span className="text-gray-500">
+                                        {values.questions.filter(q => !q.isReadOnly).length} thủ công + {values.questions.filter(q => q.isReadOnly).length} thư viện
+                                    </span>
                                 </span>
                                 <div className="flex gap-3">
                                     <button
