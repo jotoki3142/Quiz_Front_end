@@ -139,15 +139,25 @@ const StudentHomeContent = () => {
 
     const handleStartHotExam = (exam: HotExam) => {
         Swal.fire({
-            title: 'Sẵn sàng làm bài?',
-            text: `Bạn chuẩn bị bắt đầu bài thi "${exam.title}".`,
-            icon: 'question',
+            title: `Bắt đầu bài thi?`,
+            html: `<p class="text-gray-600 mb-2">Bạn đang chuẩn bị làm bài:</p>
+                   <h3 class="text-xl font-bold text-violet-600 mb-4">${exam.title}</h3>
+                   <ul class="text-left text-sm text-gray-500 space-y-1 mb-4 bg-gray-50 p-4 rounded-lg">
+                        <li>⏱️ Thời gian: <b>${exam.duration}</b></li>
+                        <li>❓ Số câu hỏi: <b>${exam.questionCount}</b></li>
+                   </ul>
+                   <p class="text-red-500 font-medium text-sm">⚠️ Lưu ý: Thời gian sẽ bắt đầu tính ngay khi bạn nhấn Bắt đầu.</p>`,
+            icon: 'info',
             showCancelButton: true,
-            confirmButtonColor: '#d946ef', // fuchsia-500
-            cancelButtonColor: '#9ca3af',
-            confirmButtonText: 'Bắt đầu làm',
-            cancelButtonText: 'Để sau',
-            borderRadius: '1rem'
+            confirmButtonColor: '#7C3AED',
+            cancelButtonColor: '#9CA3AF',
+            confirmButtonText: '🚀 Bắt đầu ngay',
+            cancelButtonText: 'Quay lại',
+            customClass: {
+                popup: 'rounded-2xl',
+                confirmButton: 'rounded-xl px-6 py-3 font-bold',
+                cancelButton: 'rounded-xl px-6 py-3 font-medium'
+            }
         }).then((result) => {
             if (result.isConfirmed) {
                 router.push(`/student/do-exam?examId=${exam.id}`);

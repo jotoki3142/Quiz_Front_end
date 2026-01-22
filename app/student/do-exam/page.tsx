@@ -1,12 +1,20 @@
-// app/student/do-exam/page.tsx
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import StudentLayout from '@/components/StudentLayout';
 import Swal from 'sweetalert2';
 import { fetchApi } from '@/lib/apiClient';
 import toast from 'react-hot-toast';
+import {
+    Clock,
+    AlertTriangle,
+    CheckCircle2,
+    Circle,
+    Menu,
+    ChevronRight,
+    Send,
+    HelpCircle
+} from 'lucide-react';
 
 // --- INTERFACES ---
 interface AnswerOption {
@@ -17,7 +25,7 @@ interface AnswerOption {
 interface Question {
     id: number;
     text: string;
-    type: string; // RENAMED from questionType to match API
+    type: string;
     answers: AnswerOption[];
 }
 
@@ -42,9 +50,11 @@ const DoExamContent = () => {
     const [secondsLeft, setSecondsLeft] = useState(0);
     const [isSubmitted, setIsSubmitted] = useState(false);
 
-    // Store answers as Array regardless of type for consistency with backend DTO
+    // Store answers as Array
     const [studentAnswers, setStudentAnswers] = useState<Record<number, number[]>>({});
     const [isLoading, setIsLoading] = useState(true);
+
+    const hasWarnedLowTime = useRef(false);
 
     // Call API Start Exam
     useEffect(() => {
@@ -60,8 +70,6 @@ const DoExamContent = () => {
                     method: 'POST'
                 });
 
-                // Map Data
-                console.log("Exam Data:", data);
                 const mappedExam: ExamData = {
                     examId: data.examId,
                     title: data.title,
@@ -72,16 +80,14 @@ const DoExamContent = () => {
                 };
 
                 setExam(mappedExam);
+                // Ensure we handle seconds correctly if backend returns total seconds or just minutes
+                // Assuming minutes based on interface
                 setSecondsLeft(data.durationMinutes * 60);
                 setIsLoading(false);
             } catch (error: any) {
                 console.error("Error starting exam:", error);
-
-                // Hiển thị lỗi cụ thể nếu có (VD: Bài thi chưa bắt đầu)
                 const msg = error.message || "Không thể bắt đầu bài thi.";
                 toast.error(msg);
-
-                // Nếu lỗi 400 (Bad Request) thường là chưa đến giờ, quay lại list
                 setTimeout(() => router.push('/student/list-exams'), 2000);
             }
         };
@@ -89,26 +95,34 @@ const DoExamContent = () => {
         startExam();
     }, [examIdParam, router]);
 
-    // Nộp bài
+    // Submit Logic
     const handleSubmit = useCallback(async (autoSubmit = false) => {
         if (!exam || isSubmitted) return;
 
         if (!autoSubmit) {
+            const unansweredCount = exam.questions.length - Object.keys(studentAnswers).length;
             const confirm = await Swal.fire({
-                title: "Xác nhận nộp bài",
-                text: "Bạn chắc chắn muốn nộp bài?",
+                title: "Nộp bài thi?",
+                html: unansweredCount > 0
+                    ? `<p class="text-gray-600">Bạn còn <b class="text-rose-600">${unansweredCount}</b> câu chưa trả lời.</p>`
+                    : `<p class="text-gray-600">Bạn đã hoàn thành tất cả câu hỏi.</p>`,
                 icon: "question",
                 showCancelButton: true,
-                confirmButtonText: "Nộp bài",
-                cancelButtonText: "Hủy",
-                confirmButtonColor: "#E33AEC",
+                confirmButtonText: "Nộp ngay",
+                cancelButtonText: "Kiểm tra lại",
+                confirmButtonColor: "#7C3AED",
+                cancelButtonColor: "#9CA3AF",
+                customClass: {
+                    popup: 'rounded-2xl',
+                    confirmButton: 'rounded-xl px-6 py-2',
+                    cancelButton: 'rounded-xl px-6 py-2'
+                }
             });
             if (!confirm.isConfirmed) return;
         }
 
         try {
             const timeSpent = Math.floor((exam.durationMinutes * 60 - secondsLeft));
-
             const payload = {
                 examId: exam.examId,
                 answers: studentAnswers,
@@ -125,58 +139,73 @@ const DoExamContent = () => {
 
             const minutes = Math.floor(timeSpent / 60);
             const seconds = timeSpent % 60;
-            const timeText = `${minutes} phút ${seconds} giây`;
+            const timeText = `${minutes}p ${seconds}s`;
 
             await Swal.fire({
-                title: autoSubmit ? "Hết thời gian làm bài" : "Đã nộp bài!",
+                title: autoSubmit ? "Hết thời gian!" : "Nộp bài thành công!",
                 html: `
-                    <div class="space-y-2">
-                        <p>Điểm số: <b>${result.score}</b></p>
-                        <p>Số câu đúng: <b>${result.correctCount}/${result.totalQuestions}</b></p>
-                        <p>Thời gian làm bài: <b>${timeText}</b></p>
+                    <div class="space-y-3 mt-4">
+                        <div class="inline-flex justify-center items-center w-20 h-20 rounded-full bg-violet-50 text-violet-600 mb-2">
+                            <span class="text-3xl font-bold">${result.score}</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800">Điểm số của bạn</h3>
+                        <div class="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Đúng:</span>
+                                <span class="font-bold text-emerald-600">${result.correctCount}/${result.totalQuestions}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Thời gian:</span>
+                                <span class="font-bold text-gray-800">${timeText}</span>
+                            </div>
+                        </div>
                     </div>
                 `,
-                icon: "success",
-                confirmButtonColor: "#E33AEC",
+                icon: autoSubmit ? "warning" : "success",
+                confirmButtonColor: "#7C3AED",
+                confirmButtonText: "Xem chi tiết",
+                allowOutsideClick: false,
+                customClass: {
+                    popup: 'rounded-2xl',
+                    confirmButton: 'rounded-xl w-full py-3 font-bold'
+                }
             });
 
-            router.push('/student/list-exams');
+            // Redirect based on exam type (if online -> result, if offline -> detail)
+            // Backend result might contain examOnlineId logic, but usually we go to list or detail
+            router.push(`/student/exam-result/${result.id || result.examHistoryId}`);
 
         } catch (error: any) {
             console.error("Submit error:", error);
             toast.error("Có lỗi khi nộp bài: " + error.message);
         }
 
-    }, [exam, isSubmitted, studentAnswers, router]);
+    }, [exam, isSubmitted, studentAnswers, router, secondsLeft]);
 
 
-    // Timer
-    const hasWarnedLowTime = React.useRef(false);
-
+    // Timer Effect
     useEffect(() => {
         if (isSubmitted || isLoading || !exam) return;
 
         if (secondsLeft <= 0) {
-            // Hết giờ -> Tự động nộp bài luôn, không hiện thông báo cũ đè lên
             handleSubmit(true);
             return;
         }
 
         // Warning when <= 5 minutes (300 seconds)
         if (secondsLeft <= 300 && !hasWarnedLowTime.current) {
-            toast("⚠️ Chú ý: Thời gian làm bài còn dưới 5 phút!", {
-                duration: 5000,
+            toast("⚠️ Thời gian còn lại dưới 5 phút!", {
+                icon: '⏳',
                 style: {
                     border: '1px solid #F59E0B',
-                    padding: '16px',
                     color: '#B45309',
-                    backgroundColor: '#FFFBEB'
+                    background: '#FFFBEB'
                 },
             });
             hasWarnedLowTime.current = true;
         }
 
-        const timer = setInterval(() => setSecondsLeft(s => s - 1), 1000);
+        const timer = setInterval(() => setSecondsLeft(s => s > 0 ? s - 1 : 0), 1000);
         return () => clearInterval(timer);
 
     }, [secondsLeft, isSubmitted, handleSubmit, isLoading, exam]);
@@ -189,120 +218,178 @@ const DoExamContent = () => {
         setStudentAnswers(prev => {
             const currentAnswers = prev[questionId] || [];
 
-            // Check Question Type
             if (type === 'MULTIPLE') {
-                // Checkbox logic (Toggle)
                 if (currentAnswers.includes(answerId)) {
                     return { ...prev, [questionId]: currentAnswers.filter(id => id !== answerId) };
                 } else {
                     return { ...prev, [questionId]: [...currentAnswers, answerId] };
                 }
             } else {
-                // Radio logic (Replace) -> SINGLE or TRUE_FALSE
                 return { ...prev, [questionId]: [answerId] };
             }
         });
     };
 
     if (isLoading) return (
-        <div className="flex h-screen items-center justify-center bg-white">
-            <div className="text-center">
-                <div className="mx-auto h-12 w-12 animate-spin rounded-full border-green-600 border-b-2" />
-                <p className="mt-4 text-lg font-semibold text-gray-700">Đang tải đề thi...</p>
+        <div className="flex bg-gray-50 h-screen w-full items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+                <p className="font-medium text-gray-500 animate-pulse">Đang tải đề thi...</p>
             </div>
         </div>
     );
 
-    if (!exam) return <div className="p-8 text-center text-gray-500">Không có dữ liệu bài thi.</div>;
+    if (!exam) return null;
+
+    const formattedTime = `${Math.floor(secondsLeft / 60).toString().padStart(2, '0')}:${(secondsLeft % 60).toString().padStart(2, '0')}`;
+    const progressPercent = ((exam.questions.length - (exam.questions.length - Object.keys(studentAnswers).length)) / exam.questions.length) * 100;
 
     return (
-        <div className="bg-gray-50 min-h-[calc(100vh-65px)]">
-            <div className="max-w-7xl mx-auto p-4 md:p-8">
+        <div className="min-h-screen bg-gray-50/50 flex flex-col font-sans text-slate-800">
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* STICKY HEADER */}
+            <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm supports-[backdrop-filter]:bg-white/80">
+                <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                    <h1 className="text-lg font-bold text-gray-900 truncate max-w-md hidden md:block" title={exam.title}>
+                        {exam.title}
+                    </h1>
+                    <div className="md:hidden text-sm font-bold text-gray-900 truncate max-w-[150px]">
+                        {exam.title}
+                    </div>
 
-                    {/* LEFT COLUMN: Main Content */}
-                    <div className="lg:col-span-3 order-2 lg:order-1">
-
-                        {/* Header */}
-                        <div className="flex justify-between items-center mb-6 p-4 bg-white rounded-lg shadow-md sticky top-0 z-10 transition-all">
-                            <h1 className="text-xl font-bold text-gray-800 line-clamp-1 flex-1 mr-4">{exam.title}</h1>
-
-                            <div className="flex items-center">
-                                <span className="mr-2 text-gray-700 font-semibold text-lg">Thời gian:</span>
-                                <div className={`text-xl font-bold ${secondsLeft < 300 ? 'text-red-600 animate-pulse' : 'text-gray-700'}`}>
-                                    {Math.floor(secondsLeft / 60)}:
-                                    {(secondsLeft % 60).toString().padStart(2, '0')}
-                                </div>
+                    <div className="flex items-center gap-4 md:gap-8">
+                        {/* Progress Bar (Mini) */}
+                        <div className="hidden md:flex flex-col w-32 gap-1">
+                            <div className="flex justify-between text-[10px] text-gray-500 font-semibold uppercase">
+                                <span>Tiến độ</span>
+                                <span>{Math.round(progressPercent)}%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-violet-600 transition-all duration-500 ease-out rounded-full"
+                                    style={{ width: `${progressPercent}%` }}
+                                />
                             </div>
                         </div>
 
-                        {/* Question List */}
-                        <div className="bg-white p-6 rounded-lg shadow-md space-y-8">
-                            {exam.questions.map((q, index) => {
-                                const selectedForQ = studentAnswers[q.id] || [];
-                                const isMultiple = q.type === 'MULTIPLE';
+                        {/* Timer */}
+                        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full font-mono text-xl font-bold border transition-colors ${secondsLeft < 300
+                            ? 'bg-rose-50 text-rose-600 border-rose-200 animate-pulse'
+                            : 'bg-gray-50 text-gray-800 border-gray-200'
+                            }`}>
+                            <Clock size={20} className={secondsLeft < 300 ? 'text-rose-600' : 'text-gray-400'} />
+                            {formattedTime}
+                        </div>
 
-                                return (
-                                    <div
-                                        key={q.id}
-                                        id={`question-${index}`} // Added ID for navigation
-                                        className="border-b pb-6 last:border-0 hover:bg-gray-50 p-4 rounded-lg transition scroll-mt-24"
-                                    >
-                                        <div className="flex justify-between items-start mb-3">
-                                            <p className="font-semibold text-lg flex-1">Câu {index + 1}: {q.text}</p>
-                                            <span className={`text-xs px-2 py-1 rounded ml-2 ${isMultiple ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                {isMultiple ? 'Chọn nhiều' : 'Chọn 1'}
+                        {/* Submit Btn (Desktop) */}
+                        <button
+                            onClick={() => handleSubmit(false)}
+                            className="hidden md:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-5 py-2 rounded-xl font-bold text-sm transition-all shadow-md hover:shadow-violet-200 active:scale-95"
+                        >
+                            <Send size={16} /> Nộp bài
+                        </button>
+                    </div>
+                </div>
+
+                {/* Mobile Progress Bar */}
+                <div className="md:hidden w-full h-1 bg-gray-200">
+                    <div
+                        className="h-full bg-violet-600 transition-all duration-300"
+                        style={{ width: `${progressPercent}%` }}
+                    />
+                </div>
+            </header>
+
+            <div className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 lg:p-8">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+                    {/* LEFT COLUMN: QUESTIONS */}
+                    <main className="lg:col-span-3 space-y-6">
+                        {exam.questions.map((q, index) => {
+                            const selectedForQ = studentAnswers[q.id] || [];
+                            const isMultiple = q.type === 'MULTIPLE';
+                            const isAnswered = selectedForQ.length > 0;
+
+                            return (
+                                <div
+                                    key={q.id}
+                                    id={`question-${index}`}
+                                    className={`bg-white rounded-2xl p-6 md:p-8 shadow-sm border transition-all duration-200 scroll-mt-24 group ${isAnswered ? 'border-violet-200 ring-1 ring-violet-50' : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <div className="flex gap-4">
+                                        <div className="shrink-0">
+                                            <span className={`flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold transition-colors ${isAnswered ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-500'
+                                                }`}>
+                                                {index + 1}
                                             </span>
                                         </div>
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <h3 className="text-lg font-medium text-gray-900 leading-relaxed">
+                                                    {q.text}
+                                                </h3>
+                                                {isMultiple && (
+                                                    <span className="shrink-0 ml-4 text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
+                                                        Chọn nhiều
+                                                    </span>
+                                                )}
+                                            </div>
 
-                                        {isMultiple && <p className="text-sm text-gray-400 italic mb-2">(Chọn tất cả đáp án đúng)</p>}
-
-                                        <div className="mt-3 space-y-2">
-                                            {q.answers.map(a => {
-                                                const isSelected = selectedForQ.includes(a.id);
-                                                return (
-                                                    <label key={a.id} className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition select-none">
-                                                        <input
-                                                            type={isMultiple ? "checkbox" : "radio"}
-                                                            name={`q-${q.id}`}
-                                                            checked={isSelected}
-                                                            onChange={() => handleAnswerChange(q.id, a.id, q.type)}
-                                                            className={`w-5 h-5 text-pink-600 focus:ring-pink-500 border-gray-300 ${!isMultiple ? 'rounded-full' : 'rounded'}`}
-                                                        />
-                                                        <span className={`ml-3 ${isSelected ? 'text-[#E33AEC] font-medium' : 'text-gray-700'}`}>
-                                                            {a.text}
-                                                        </span>
-                                                    </label>
-                                                );
-                                            })}
+                                            <div className="space-y-3">
+                                                {q.answers.map(a => {
+                                                    const isSelected = selectedForQ.includes(a.id);
+                                                    return (
+                                                        <label
+                                                            key={a.id}
+                                                            className={`relative flex items-center p-3.5 rounded-xl border-2 cursor-pointer transition-all duration-200 group/label ${isSelected
+                                                                ? 'bg-violet-50 border-violet-500 z-10'
+                                                                : 'bg-white border-transparent hover:bg-gray-50 border-gray-100'
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-center h-5">
+                                                                <input
+                                                                    type={isMultiple ? "checkbox" : "radio"}
+                                                                    name={`q-${q.id}`}
+                                                                    checked={isSelected}
+                                                                    onChange={() => handleAnswerChange(q.id, a.id, q.type)}
+                                                                    className="sr-only"
+                                                                />
+                                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'border-violet-600 bg-violet-600' : 'border-gray-300 group-hover/label:border-violet-400'
+                                                                    }`}>
+                                                                    {isSelected && (
+                                                                        <div className="w-2 h-2 bg-white rounded-full" />
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className={`ml-3 text-sm md:text-base font-medium transition-colors ${isSelected ? 'text-violet-900' : 'text-gray-700'
+                                                                }`}>
+                                                                {a.text}
+                                                            </div>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
+                                </div>
+                            );
+                        })}
+                    </main>
 
-                        {/* Footer Buttons (Mobile & Desktop in Flow) */}
-                        <div className="flex justify-center gap-6 mt-8 pb-10">
-                            <button
-                                onClick={() => handleSubmit(false)}
-                                disabled={isSubmitted}
-                                className="text-white font-bold py-3 px-8 rounded-lg disabled:opacity-50 transition shadow-lg hover:shadow-xl transform hover:-translate-y-1 block w-full md:w-auto"
-                                style={{ backgroundColor: '#E33AEC' }}
-                            >
-                                {isSubmitted ? "Đã nộp bài" : "Nộp bài"}
-                            </button>
-                        </div>
-                    </div>
+                    {/* RIGHT COLUMN: NAVIGATION */}
+                    <aside className="hidden lg:block lg:col-span-1">
+                        <div className="sticky top-20 bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+                            <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                                <h3 className="font-bold text-gray-900">Mục lục câu hỏi</h3>
+                                <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                                    {Object.keys(studentAnswers).length}/{exam.questions.length}
+                                </span>
+                            </div>
 
-                    {/* RIGHT COLUMN: Question Navigation & Submit */}
-                    <div className="lg:col-span-1 order-1 lg:order-2">
-                        <div className="sticky top-24 bg-white p-4 rounded-lg shadow-md">
-                            <h3 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Danh sách câu hỏi</h3>
-
-                            <div className="grid grid-cols-5 gap-2 mb-6">
+                            <div className="grid grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
                                 {exam.questions.map((q, index) => {
-                                    const hasAnswer = studentAnswers[q.id] && studentAnswers[q.id].length > 0;
+                                    const isAnswered = studentAnswers[q.id] && studentAnswers[q.id].length > 0;
                                     return (
                                         <button
                                             key={q.id}
@@ -313,10 +400,12 @@ const DoExamContent = () => {
                                                 });
                                             }}
                                             className={`
-                                                w-8 h-8 rounded text-sm font-semibold flex items-center justify-center transition
-                                                ${hasAnswer
-                                                    ? 'bg-[#E33AEC] text-white hover:bg-[#d633dd]'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'}
+                                                aspect-square rounded-lg text-sm font-bold transition-all duration-200
+                                                flex items-center justify-center
+                                                ${isAnswered
+                                                    ? 'bg-violet-600 text-white shadow-md shadow-violet-200 hover:bg-violet-700'
+                                                    : 'bg-white border border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-600'
+                                                }
                                             `}
                                         >
                                             {index + 1}
@@ -325,23 +414,27 @@ const DoExamContent = () => {
                                 })}
                             </div>
 
-                            <div className="space-y-2 text-xs text-gray-500">
-                                <div className="flex items-center">
-                                    <div className="w-3 h-3 rounded bg-[#E33AEC] mr-2"></div>
-                                    <span>Đã làm</span>
+                            <div className="mt-6 space-y-3 pt-4 border-t border-gray-100">
+                                <div className="flex items-center gap-3 text-xs text-gray-600">
+                                    <div className="w-3 h-3 rounded bg-violet-600" /> Đã trả lời
                                 </div>
-                                <div className="flex items-center">
-                                    <div className="w-3 h-3 rounded bg-gray-100 border border-gray-200 mr-2"></div>
-                                    <span>Chưa làm</span>
+                                <div className="flex items-center gap-3 text-xs text-gray-600">
+                                    <div className="w-3 h-3 rounded bg-white border border-gray-300" /> Chưa trả lời
                                 </div>
                             </div>
-
-                            {/* Button Nộp bài - Desktop Sidebar specific */}
-                            {/* Only show here if desired, otherwise rely on the main bottom button */}
                         </div>
-                    </div>
-
+                    </aside>
                 </div>
+            </div>
+
+            {/* MOBILE FLOATING ACTION BUTTON */}
+            <div className="md:hidden fixed bottom-6 right-6 z-50">
+                <button
+                    onClick={() => handleSubmit(false)}
+                    className="flex items-center justify-center w-14 h-14 bg-violet-600 text-white rounded-full shadow-lg shadow-violet-300 active:scale-95 transition-transform"
+                >
+                    <Send size={24} />
+                </button>
             </div>
         </div>
     );
