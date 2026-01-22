@@ -143,7 +143,7 @@ const TeacherSidebar = () => {
                 <button
                     type="button"
                     onClick={(e) => handleNavigation('/teacher/teacherhome', e as any)}
-                    className="text-xl font-black text-[#E33AEC]"
+                    className="text-3xl font-black tracking-tighter text-[#E33AEC]"
                 >
                     QuizzZone
                 </button>

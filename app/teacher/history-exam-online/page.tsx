@@ -1,11 +1,19 @@
-// Cleaned & optimized version
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchApi } from "@/lib/apiClient";
 import { toastError } from "@/lib/toast";
-import { FileText, Users, TrendingUp, Eye, Loader2, Calendar } from "lucide-react";
+import {
+    MagnifyingGlassIcon,
+    UsersIcon,
+    ChartBarIcon,
+    CalendarIcon,
+    EyeIcon,
+    CloudIcon,
+    ArrowRightIcon,
+    FunnelIcon,
+} from "@heroicons/react/24/outline";
 
 interface FinishedExam {
     id: number;
@@ -19,6 +27,11 @@ export default function TeacherExamHistoryPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [exams, setExams] = useState<FinishedExam[]>([]);
+
+    // Search State
+    const [searchQuery, setSearchQuery] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     useEffect(() => {
         const fetchFinishedExams = async () => {
@@ -71,126 +84,170 @@ export default function TeacherExamHistoryPage() {
         fetchFinishedExams();
     }, []);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="flex items-center gap-2 text-purple-600">
-                    <Loader2 className="animate-spin" />
-                    <span>Đang tải lịch sử...</span>
-                </div>
-            </div>
-        );
-    }
+    // Filter logic
+    const filteredExams = exams.filter(exam => {
+        const matchesSearch = exam.name.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesSearch;
+    });
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6 flex flex-col">
-            <div className="max-w-7xl mx-auto w-full">
+        <div className="min-h-screen">
+            <div className="space-y-6">
+                {/* Hero Section */}
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#A53AEC] to-fuchsia-600 shadow-xl shadow-purple-200 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-white/10 blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 rounded-full bg-black/10 blur-3xl"></div>
 
-                {/* ===================== TAB ===================== */}
-                <div className="flex items-center justify-between mb-8 bg-white px-6 py-2 rounded-xl shadow-sm">
-                    <div className="flex gap-8 text-sm font-bold border-b border-gray-100 w-full">
-                        <button
-                            onClick={() => router.push("/teacher/list-exam")}
-                            className="pb-3 pt-2 text-gray-500 hover:text-[#A53AEC]"
-                        >
-                            <span className="text-base">Bài thi</span>
-                        </button>
+                    <div className="relative p-8 text-white">
+                        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                            <div>
+                                <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
+                                    <CloudIcon className="w-10 h-10 text-violet-200" />
+                                    Lịch sử thi Online
+                                </h1>
+                                <p className="text-violet-100 mt-2 text-lg opacity-90 max-w-2xl">
+                                    Thống kê chi tiết và kết quả của các bài thi trực tuyến đã kết thúc.
+                                </p>
+                            </div>
 
-                        <button
-                            onClick={() => router.push("/teacher/history-exam")}
-                            className="pb-3 pt-2 text-gray-500 hover:text-[#A53AEC]"
-                        >
-                            <span className="text-base">Lịch sử thi offline</span>
-                        </button>
+                            {/* Navigation Tabs */}
+                            <div className="flex p-1 bg-white/20 backdrop-blur-md rounded-xl border border-white/20">
+                                <button
+                                    onClick={() => router.push("/teacher/list-exam")}
+                                    className="px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-all text-sm font-medium"
+                                >
+                                    Bài thi
+                                </button>
+                                <button
+                                    onClick={() => router.push("/teacher/history-exam")}
+                                    className="px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-all text-sm font-medium"
+                                >
+                                    Lịch sử Offline
+                                </button>
+                                <button
+                                    className="px-4 py-2 rounded-lg bg-white text-[#A53AEC] font-bold shadow-sm transition-all text-sm"
+                                >
+                                    Lịch sử Online
+                                </button>
+                            </div>
+                        </div>
 
-                        <button
-                            className="pb-3 pt-2 text-[#A53AEC] border-b-2 border-[#A53AEC]"
-                        >
-                            <span className="text-base">Lịch sử thi online</span>
-                        </button>
+                        {/* Filter Bar (White Style) */}
+                        <div className="mt-8 p-1.5 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex flex-col md:flex-row gap-3">
+                            <div className="relative flex-1 min-w-[200px] group">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <MagnifyingGlassIcon className="w-5 h-5 text-zinc-400 group-focus-within:text-violet-600 transition-colors" />
+                                </div>
+                                <input
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Tìm kiếm theo tên bài thi..."
+                                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border-0 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all text-sm font-medium shadow-sm"
+                                />
+                            </div>
+
+                            <div className="flex flex-1 gap-2">
+                                <div className="relative flex-1">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span className="text-xs font-semibold text-zinc-500">Từ:</span>
+                                    </div>
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border-0 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm font-medium shadow-sm"
+                                    />
+                                </div>
+                                <div className="relative flex-1">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span className="text-xs font-semibold text-zinc-500">Đến:</span>
+                                    </div>
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border-0 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm font-medium shadow-sm"
+                                    />
+                                </div>
+                                <button className="px-6 py-3 bg-[#A53AEC] text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 flex items-center gap-2">
+                                    <FunnelIcon className="w-4 h-4" /> Lọc
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Header */}
-                <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="p-3 bg-purple-100 rounded-lg">
-                            <FileText className="text-purple-600" size={32} />
+                {/* Content Area */}
+                <div className="bg-white rounded-3xl border border-zinc-100 shadow-sm min-h-[500px] p-6">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
+                            <div className="w-10 h-10 border-4 border-purple-200 border-t-[#A53AEC] rounded-full animate-spin mb-4"></div>
+                            <p>Đang tải dữ liệu...</p>
                         </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-800">Lịch sử bài thi Online</h1>
-                            <p className="text-gray-600 text-sm">
-                                Tổng số bài thi đã kết thúc: {exams.length}
-                            </p>
+                    ) : filteredExams.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-zinc-400 border-2 border-dashed border-zinc-100 rounded-2xl bg-zinc-50/50">
+                            <CloudIcon className="w-16 h-16 mb-4 opacity-20" />
+                            <p className="font-medium text-zinc-500">Chưa có bài thi online nào kết thúc.</p>
                         </div>
-                    </div>
-                </div>
-
-                {/* Exams Table */}
-                <div className="bg-white rounded-xl shadow-md overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-                                <tr>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold">Tên bài thi</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold">Ngày kết thúc</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold">Số bài nộp</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold">Điểm TB</th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold">Hành động</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {exams.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                                            <FileText size={48} className="mx-auto mb-2 opacity-50" />
-                                            <p>Chưa có bài thi online nào đã kết thúc</p>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    exams.map((exam) => (
-                                        <tr key={exam.id} className="hover:bg-gray-50 transition">
-                                            <td className="px-6 py-4">
-                                                <span className="font-medium text-gray-900">{exam.name}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center text-gray-600">
-                                                <div className="flex items-center justify-center gap-1">
-                                                    <Calendar size={16} />
-                                                    {exam.finishedAt
-                                                        ? new Date(exam.finishedAt).toLocaleDateString("vi-VN")
-                                                        : "---"}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-1 text-blue-600">
-                                                    <Users size={16} />
-                                                    <span className="font-semibold">{exam.totalSubmissions}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-1 text-purple-600">
-                                                    <TrendingUp size={16} />
-                                                    <span className="font-bold">{exam.averageScore.toFixed(1)}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <button
-                                                    onClick={() => router.push(`/teacher/exam-online/${exam.id}/results`)}
-                                                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center gap-2 mx-auto"
-                                                >
-                                                    <Eye size={16} />
-                                                    Xem kết quả
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {filteredExams.map((exam) => (
+                                <HistoryOnlineCard key={exam.id} exam={exam} onDetail={() => router.push(`/teacher/exam-online/${exam.id}/results`)} />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
     );
 }
 
+// --- Sub Components ---
+
+const HistoryOnlineCard = ({ exam, onDetail }: { exam: FinishedExam, onDetail: () => void }) => {
+    return (
+        <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-sm hover:shadow-lg transition-all hover:border-purple-200 group flex flex-col h-full">
+            <div className="flex justify-between items-start mb-3">
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200">
+                    Đã kết thúc
+                </span>
+                <div className="p-2 bg-purple-50 text-[#A53AEC] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    <EyeIcon className="w-5 h-5" />
+                </div>
+            </div>
+
+            <h3 className="font-bold text-zinc-900 text-lg mb-4 line-clamp-2" title={exam.name}>
+                {exam.name}
+            </h3>
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="p-3 rounded-xl bg-zinc-50 flex flex-col items-center justify-center border border-zinc-100">
+                    <span className="text-2xl font-black text-zinc-800">{exam.totalSubmissions}</span>
+                    <span className="text-xs text-zinc-500 font-medium flex items-center gap-1 mt-1">
+                        <UsersIcon className="w-3 h-3" /> Bài nộp
+                    </span>
+                </div>
+                <div className="p-3 rounded-xl bg-zinc-50 flex flex-col items-center justify-center border border-zinc-100">
+                    <span className="text-2xl font-black text-[#A53AEC]">{exam.averageScore.toFixed(1)}</span>
+                    <span className="text-xs text-zinc-500 font-medium flex items-center gap-1 mt-1">
+                        <ChartBarIcon className="w-3 h-3" /> Điểm TB
+                    </span>
+                </div>
+            </div>
+
+            <div className="mt-auto space-y-4">
+                <div className="flex items-center justify-center gap-2 text-xs text-zinc-400 pt-4 border-t border-zinc-50">
+                    <CalendarIcon className="w-3 h-3" />
+                    Kết thúc: {exam.finishedAt ? new Date(exam.finishedAt).toLocaleDateString("vi-VN") : "---"}
+                </div>
+
+                <button
+                    onClick={onDetail}
+                    className="w-full py-2.5 rounded-xl bg-[#A53AEC] text-white font-bold text-sm hover:bg-purple-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-200 active:scale-95"
+                >
+                    Xem kết quả <ArrowRightIcon className="w-4 h-4" />
+                </button>
+            </div>
+        </div>
+    );
+};
