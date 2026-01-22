@@ -867,16 +867,20 @@ export default function TeacherEditOnlineExamPage() {
                             </div>
 
                             {/* Library Modal */}
-                            {openLibrary && createPortal(
-                                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm" onClick={() => setOpenLibrary(false)}>
-                                    <div className="bg-white rounded-3xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                            {openLibrary && typeof window !== 'undefined' && createPortal(
+                                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+                                    <div className="bg-white rounded-3xl w-full max-w-4xl h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+
                                         {/* Modal Header */}
-                                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                                        <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
                                             <div>
-                                                <h2 className="text-2xl font-bold text-gray-900">Thư viện câu hỏi</h2>
-                                                <p className="text-sm text-gray-500 mt-1">Chọn câu hỏi để thêm vào bài thi của bạn</p>
+                                                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                                                    <BookOpenIcon className="w-7 h-7 text-violet-600" />
+                                                    Thư viện câu hỏi
+                                                </h2>
+                                                <p className="text-gray-500 mt-1">Chọn câu hỏi từ ngân hàng để thêm vào bài thi</p>
                                             </div>
-                                            <div className="flex gap-3">
+                                            <div className="flex items-center gap-4">
                                                 <div className="flex bg-gray-100 p-1 rounded-xl">
                                                     <button
                                                         onClick={() => setViewMode('grid')}
@@ -892,128 +896,221 @@ export default function TeacherEditOnlineExamPage() {
                                                     </button>
                                                 </div>
                                                 <button
-                                                    onClick={() => {
-                                                        const newQuestions = selectedQuestions.map(q => ({
-                                                            ...q,
-                                                            isReadOnly: true, // Imported questions are read-only
-                                                            answers: q.answers.map(a => ({ ...a, isCorrect: a.isCorrect })) // Ensure clean mapping
-                                                        }));
-                                                        setFieldValue('questions', [...values.questions, ...newQuestions]);
-                                                        setOpenLibrary(false);
-                                                        setSelectedQuestions([]);
-                                                        toastSuccess(`Đã thêm ${newQuestions.length} câu hỏi vào bài thi`);
-                                                    }}
-                                                    className="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold transition-colors flex items-center gap-2"
-                                                    disabled={selectedQuestions.length === 0}
+                                                    type="button"
+                                                    onClick={() => setOpenLibrary(false)}
+                                                    className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                                                 >
-                                                    <PlusCircleIcon className="w-5 h-5" />
-                                                    Thêm ({selectedQuestions.length})
-                                                </button>
-                                                <button onClick={() => setOpenLibrary(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors">
-                                                    <XMarkIcon className="w-6 h-6" />
+                                                    <XMarkIcon className="w-8 h-8" />
                                                 </button>
                                             </div>
                                         </div>
 
-                                        {/* Filters */}
-                                        <div className="p-6 bg-gray-50 border-b border-gray-100 grid grid-cols-1 md:grid-cols-4 gap-4">
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Tìm kiếm nội dung..."
-                                                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-violet-500 outline-none"
-                                                    value={searchQuery}
-                                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                                />
-                                                <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                        {/* Search & Filter Bar */}
+                                        <div className="px-8 py-4 bg-gray-50/50 border-b border-gray-100 shrink-0 space-y-4">
+                                            <div className="flex flex-col md:flex-row gap-4">
+                                                <div className="relative flex-1">
+                                                    <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                                                    <input
+                                                        placeholder="Tìm kiếm câu hỏi..."
+                                                        value={searchQuery}
+                                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleSearchLibrary()}
+                                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all shadow-sm"
+                                                    />
+                                                </div>
+                                                <div className="relative w-full md:w-64 shrink-0">
+                                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                        <FolderIcon className="h-5 w-5 text-gray-400" />
+                                                    </div>
+                                                    <select
+                                                        value={searchCategory}
+                                                        onChange={(e) => setSearchCategory(e.target.value)}
+                                                        className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none appearance-none cursor-pointer hover:border-violet-300 transition-all shadow-sm truncate"
+                                                    >
+                                                        <option value="">Tất cả danh mục</option>
+                                                        {categories.map((cat) => (
+                                                            <option key={cat.id} value={cat.id}>
+                                                                {cat.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                        <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSearchLibrary}
+                                                    className="px-8 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-colors shadow-lg shadow-violet-200 shrink-0"
+                                                >
+                                                    Tìm kiếm
+                                                </button>
                                             </div>
-                                            <select
-                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-violet-500 outline-none appearance-none cursor-pointer"
-                                                value={searchCategory}
-                                                onChange={(e) => setSearchCategory(e.target.value)}
-                                            >
-                                                <option value="">Tất cả danh mục</option>
-                                                {categories.map(c => (
-                                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                                ))}
-                                            </select>
-                                            <select
-                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-violet-500 outline-none appearance-none cursor-pointer"
-                                                value={searchDifficulty}
-                                                onChange={(e) => setSearchDifficulty(e.target.value)}
-                                            >
-                                                <option value="">Tất cả độ khó</option>
-                                                <option value="EASY">Dễ</option>
-                                                <option value="MEDIUM">Trung bình</option>
-                                                <option value="HARD">Khó</option>
-                                            </select>
-                                            <select
-                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-violet-500 outline-none appearance-none cursor-pointer"
-                                                value={searchType}
-                                                onChange={(e) => setSearchType(e.target.value)}
-                                            >
-                                                <option value="">Tất cả loại câu hỏi</option>
-                                                <option value="SINGLE">Một đáp án</option>
-                                                <option value="MULTIPLE">Nhiều đáp án</option>
-                                                <option value="TRUE_FALSE">Đúng/Sai</option>
-                                            </select>
+
+                                            {/* Advanced Filters */}
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+
+                                                    {/* Difficulty Filters */}
+                                                    <div className="flex items-center bg-white rounded-lg p-1 border border-gray-200 shadow-sm shrink-0">
+                                                        <span className="text-xs font-semibold text-gray-500 px-2 uppercase">Độ khó</span>
+                                                        <div className="w-px h-4 bg-gray-200 mx-1"></div>
+                                                        {['Easy', 'Medium', 'Hard'].map((diff) => (
+                                                            <button
+                                                                key={diff}
+                                                                type="button"
+                                                                onClick={() => setSearchDifficulty(searchDifficulty === diff.toUpperCase() ? '' : diff.toUpperCase())}
+                                                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ml-1 ${searchDifficulty === diff.toUpperCase()
+                                                                    ? diff === 'Easy' ? 'bg-green-100 text-green-700 ring-1 ring-green-500' :
+                                                                        diff === 'Medium' ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-500' :
+                                                                            'bg-red-100 text-red-700 ring-1 ring-red-500'
+                                                                    : 'text-gray-500 hover:bg-gray-50'
+                                                                    }`}
+                                                            >
+                                                                {diff === 'Easy' ? 'Dễ' : diff === 'Medium' ? 'TB' : 'Khó'}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Type Filters */}
+                                                    <div className="flex items-center bg-white rounded-lg p-1 border border-gray-200 shadow-sm shrink-0">
+                                                        <span className="text-xs font-semibold text-gray-500 px-2 uppercase">Loại</span>
+                                                        <div className="w-px h-4 bg-gray-200 mx-1"></div>
+                                                        {['SINGLE', 'MULTIPLE', 'TRUE_FALSE'].map((type) => (
+                                                            <button
+                                                                key={type}
+                                                                type="button"
+                                                                onClick={() => setSearchType(searchType === type ? '' : type)}
+                                                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ml-1 ${searchType === type
+                                                                    ? 'bg-violet-100 text-violet-700 ring-1 ring-violet-500'
+                                                                    : 'text-gray-500 hover:bg-gray-50'
+                                                                    }`}
+                                                            >
+                                                                {type === 'SINGLE' ? 'Đơn' : type === 'MULTIPLE' ? 'Nhiều' : 'Đ/S'}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="flex-1"></div>
+
+                                                    {selectedQuestions.length > 0 && (
+                                                        <button
+                                                            onClick={() => setSelectedQuestions([])}
+                                                            className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors whitespace-nowrap"
+                                                        >
+                                                            Bỏ chọn ({selectedQuestions.length})
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        {/* Questions Grid/List */}
-                                        <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
+                                        {/* Content Body */}
+                                        <div className="flex-1 overflow-y-auto p-8 bg-gray-50">
                                             {filteredLibraryQuestions.length === 0 ? (
-                                                <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                                                    <FolderIcon className="w-16 h-16 mb-4 opacity-20" />
-                                                    <p className="text-lg font-medium">Không tìm thấy câu hỏi nào</p>
+                                                <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
+                                                    <MagnifyingGlassIcon className="w-24 h-24 mb-4" />
+                                                    <p className="text-xl font-medium">Không tìm thấy câu hỏi nào</p>
+                                                    <p className="text-sm">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
                                                 </div>
                                             ) : (
-                                                <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
-                                                    {filteredLibraryQuestions.map((q) => {
-                                                        const isSelected = !!selectedQuestions.find(sq => sq.id === q.id);
-                                                        return (
-                                                            <div
-                                                                key={q.id}
-                                                                className={`
-                                                                    group relative bg-white border rounded-2xl transition-all cursor-pointer
-                                                                    ${isSelected ? 'border-violet-500 shadow-violet-100 ring-1 ring-violet-500' : 'border-gray-200 hover:border-violet-300 hover:shadow-lg hover:shadow-violet-50'}
-                                                                    ${viewMode === 'list' ? 'flex items-center p-4 gap-6' : 'p-6 flex flex-col'}
-                                                                `}
-                                                                onClick={() => toggleQuestionSelection(q)}
-                                                            >
-                                                                <div className="flex justify-between items-start mb-4 w-full">
-                                                                    <div className="flex gap-2">
-                                                                        <TypeBadge type={q.type} />
-                                                                        <DifficultyBadge difficulty={q.difficulty} />
-                                                                    </div>
-                                                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-violet-500 border-violet-500' : 'border-gray-300 group-hover:border-violet-400'}`}>
+                                                <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" : "space-y-4"}>
+                                                    {filteredLibraryQuestions
+                                                        .filter(q => !values.questions.some(cq => cq.id === q.id))
+                                                        .map((q) => {
+                                                            const isSelected = selectedQuestions.some(sq => sq.id === q.id);
+                                                            return (
+                                                                <div
+                                                                    key={q.id}
+                                                                    onClick={() => toggleQuestionSelection(q)}
+                                                                    className={`
+                                                                        relative group cursor-pointer bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden
+                                                                        ${isSelected
+                                                                            ? 'border-violet-500 shadow-lg shadow-violet-100 ring-2 ring-violet-500/20'
+                                                                            : 'border-transparent shadow-sm hover:shadow-md hover:border-violet-200'
+                                                                        }
+                                                                        ${viewMode === 'list' ? 'flex items-center p-4 gap-6' : 'flex flex-col p-6'}
+                                                                    `}
+                                                                >
+                                                                    {/* Selection Checkbox overlay */}
+                                                                    <div className={`absolute top-4 right-4 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-violet-600 border-violet-600' : 'border-gray-300 bg-white'}`}>
                                                                         {isSelected && <CheckIcon className="w-4 h-4 text-white" />}
                                                                     </div>
-                                                                </div>
 
-                                                                <p className={`font-medium text-gray-800 line-clamp-3 mb-4 flex-1 ${viewMode === 'list' ? 'mb-0' : ''}`}>
-                                                                    {q.title}
-                                                                </p>
+                                                                    {/* Badges */}
+                                                                    <div className={`flex gap-2 mb-4 ${viewMode === 'list' ? 'mb-0 w-48 shrink-0 flex-col gap-1' : ''}`}>
+                                                                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold w-fit ${q.difficulty === 'EASY' ? 'bg-green-100 text-green-700' :
+                                                                            q.difficulty === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                                                                                'bg-red-100 text-red-700'
+                                                                            }`}>
+                                                                            {q.difficulty === "EASY" ? "Dễ" : q.difficulty === "MEDIUM" ? "Trung bình" : "Khó"}
+                                                                        </span>
+                                                                        <span className="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 text-xs font-bold w-fit">
+                                                                            {q.type === "SINGLE" ? "Đơn" : q.type === "MULTIPLE" ? "Đa" : "Đ/S"}
+                                                                        </span>
+                                                                    </div>
 
-                                                                <div className={`flex items-center justify-between mt-auto pt-4 border-t border-gray-50 w-full ${viewMode === 'list' ? 'hidden' : ''}`}>
-                                                                    <span className="text-xs font-medium text-gray-400 truncate max-w-[120px]">
-                                                                        {q.categoryName || "Chưa phân loại"}
-                                                                    </span>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setDetailQuestion(q);
-                                                                        }}
-                                                                        className="text-xs font-bold text-violet-600 hover:bg-violet-50 px-3 py-1.5 rounded-lg transition-colors"
-                                                                    >
-                                                                        Xem chi tiết
-                                                                    </button>
+                                                                    {/* Content */}
+                                                                    <div className="flex-1">
+                                                                        <div className="flex justify-between items-start gap-2 mb-2">
+                                                                            <h3 className="font-bold text-gray-800 line-clamp-3 group-hover:text-violet-700 transition-colors">
+                                                                                {q.title}
+                                                                            </h3>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setDetailQuestion(q);
+                                                                                }}
+                                                                                className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors shrink-0"
+                                                                                title="Xem chi tiết"
+                                                                            >
+                                                                                <EyeIcon className="w-5 h-5" />
+                                                                            </button>
+                                                                        </div>
+                                                                        <p className="text-xs text-gray-500">
+                                                                            {q.categoryName || "Chưa phân loại"} • {q.createdBy || "System"}
+                                                                        </p>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        );
-                                                    })}
+                                                            );
+                                                        })}
                                                 </div>
                                             )}
                                         </div>
+
+                                        {/* Footer Actions */}
+                                        <div className="p-6 bg-white border-t border-gray-100 flex justify-between items-center shrink-0">
+                                            <div className="text-sm font-medium text-gray-600">
+                                                Đã chọn: <span className="text-violet-600 font-bold text-lg">{selectedQuestions.length}</span> câu hỏi
+                                            </div>
+                                            <div className="flex gap-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setOpenLibrary(false)}
+                                                    className="px-6 py-2.5 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition-colors"
+                                                >
+                                                    Đóng
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={selectedQuestions.length === 0}
+                                                    onClick={() => {
+                                                        const currentQuestions = values.questions;
+                                                        // Filter out dupes just in case
+                                                        const newQuestions = selectedQuestions.filter(sq => !currentQuestions.some(cq => cq.id === sq.id));
+                                                        setFieldValue("questions", [...currentQuestions, ...newQuestions]);
+                                                        toastSuccess(`Đã thêm ${newQuestions.length} câu hỏi vào bài thi!`);
+                                                        setSelectedQuestions([]);
+                                                        setOpenLibrary(false);
+                                                    }}
+                                                    className="px-8 py-2.5 rounded-xl bg-gradient-to-r from-[#A53AEC] to-fuchsia-600 text-white font-bold shadow-lg shadow-violet-200 hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-all"
+                                                >
+                                                    Thêm vào bài thi
+                                                </button>
+                                            </div>
+                                        </div>
+
                                     </div>
                                 </div>,
                                 document.body
