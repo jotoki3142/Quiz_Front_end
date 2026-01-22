@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { fetchApi } from '@/lib/apiClient';
 import {
     MagnifyingGlassIcon,
     PlusIcon,
@@ -24,38 +25,9 @@ interface Category {
     createdByRole?: string;
 }
 
-const getAuthToken = () => {
-    if (typeof window !== 'undefined') {
-        return localStorage.getItem('jwt');
-    }
-    return null;
-};
-
-async function fetchApi(url: string, options: any = {}) {
-    const token = getAuthToken();
-    const defaultHeaders = {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-    };
-
-    const config: any = {
-        method: options.method || 'GET',
-        headers: { ...defaultHeaders, ...(options.headers || {}) },
-    };
-
-    if (options.body) config.body = JSON.stringify(options.body);
-
-    // Ensure /api prefix if not present
-    const fullUrl = url.startsWith('/api') ? url : (url.startsWith('/') ? `/api${url}` : `/api/${url}`);
-
-    const response = await fetch(fullUrl, config);
-    const isJson = response.headers.get('content-type')?.includes('application/json');
-    const data = isJson ? await response.json() : await response.text();
-
-    if (!response.ok) {
-        throw new Error(data.message || response.statusText || "Lỗi không xác định");
-    }
-    return data;
+interface UserProfile {
+    username: string;
+    authorities: { authority: string }[];
 }
 
 const CategoryModal = ({
@@ -204,7 +176,7 @@ const DeleteConfirmModal = ({
     );
 };
 
-export default function CategoriesPage() {
+export default function TeacherCategoriesPage() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [keyword, setKeyword] = useState("");
@@ -216,8 +188,21 @@ export default function CategoriesPage() {
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+    const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
     const PAGE_SIZE = 10;
+
+    // Load user profile
+    useEffect(() => {
+        (async () => {
+            try {
+                const profile = await fetchApi('/me');
+                setCurrentUser(profile);
+            } catch (error) {
+                console.error("Failed to load user profile", error);
+            }
+        })();
+    }, []);
 
     const fetchCategories = useCallback(async (p = page, k = keyword) => {
         setLoading(true);
@@ -289,6 +274,22 @@ export default function CategoriesPage() {
         }
     };
 
+    // Helper to check permission
+    const canEditOrDelete = (cat: Category) => {
+        if (!currentUser) return false;
+
+        // Admin permissions (if any teacher has admin role, though rare in this context)
+        const isAdmin = currentUser.authorities.some(auth => auth.authority === 'ROLE_ADMIN');
+        if (isAdmin) return true;
+
+        // Check if category created by Admin -> Teacher cannot delete
+        if ((cat.createdByRole || "").toUpperCase() === "ADMIN") return false;
+
+        // Check ownership
+        const isOwner = cat.createdBy?.toLowerCase().trim() === currentUser.username?.toLowerCase().trim();
+        return isOwner;
+    };
+
     return (
         <div>
             <div className="space-y-6">
@@ -324,7 +325,6 @@ export default function CategoriesPage() {
                                     type="text"
                                     value={keyword}
                                     onChange={(e) => setKeyword(e.target.value)}
-                                    // onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                                     placeholder="Tìm kiếm danh mục..."
                                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-transparent focus:border-violet-300 focus:ring-4 focus:ring-violet-100 text-zinc-900 placeholder:text-zinc-400 focus:outline-none transition-all text-sm font-medium shadow-sm"
                                 />
@@ -394,20 +394,24 @@ export default function CategoriesPage() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => { setEditingCategory(cat); setIsModalOpen(true); }}
-                                                        className="p-2 rounded-lg text-violet-600 hover:bg-violet-100 transition-colors"
-                                                        title="Chỉnh sửa"
-                                                    >
-                                                        <PencilSquareIcon className="w-5 h-5" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => { setDeletingCategory(cat); setIsDeleteModalOpen(true); }}
-                                                        className="p-2 rounded-lg text-rose-500 hover:bg-rose-100 transition-colors"
-                                                        title="Xóa"
-                                                    >
-                                                        <TrashIcon className="w-5 h-5" />
-                                                    </button>
+                                                    {canEditOrDelete(cat) && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => { setEditingCategory(cat); setIsModalOpen(true); }}
+                                                                className="p-2 rounded-lg text-violet-600 hover:bg-violet-100 transition-colors"
+                                                                title="Chỉnh sửa"
+                                                            >
+                                                                <PencilSquareIcon className="w-5 h-5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setDeletingCategory(cat); setIsDeleteModalOpen(true); }}
+                                                                className="p-2 rounded-lg text-rose-500 hover:bg-rose-100 transition-colors"
+                                                                title="Xóa"
+                                                            >
+                                                                <TrashIcon className="w-5 h-5" />
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
