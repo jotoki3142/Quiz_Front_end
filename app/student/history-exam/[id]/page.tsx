@@ -1,9 +1,23 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { fetchApi } from "@/lib/apiClient";
 import toast from "react-hot-toast";
+import { motion } from "framer-motion";
+import {
+    CheckCircle2,
+    XCircle,
+    Clock,
+    Calendar,
+    ArrowLeft,
+    Trophy,
+    Target,
+    BarChart3,
+    AlertCircle,
+    Check,
+    X
+} from "lucide-react";
 
 // --- Interfaces ---
 interface StudentAnswerDto {
@@ -103,210 +117,268 @@ export default function StudentHistoryDetailPage() {
         loadData();
     }, [historyId]);
 
-    if (loading) return (
-        <div className="flex justify-center items-center min-h-screen bg-gray-50">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-        </div>
-    );
+    const stats = useMemo(() => {
+        if (!history) return null;
+        const accuracy = Math.round((history.correctCount / history.totalQuestions) * 100) || 0;
+        return { accuracy };
+    }, [history]);
 
-    if (!history || !exam) return (
-        <div className="flex justify-center items-center min-h-screen bg-gray-50">
-            <p className="text-red-500 font-semibold">Không tìm thấy dữ liệu bài thi.</p>
-        </div>
-    );
-
-    // Helper to format date
-    const formatDate = (isoString: string) => {
+    // Helpers
+    const formatDate = (isoString?: string) => {
         if (!isoString) return "---";
-        // Convert to MM-DD-YYYY or matching mockup 12-19-2025
-        const d = new Date(isoString);
-        return d.toLocaleDateString('en-US').replace(/\//g, '-');
-    };
-
-    const formatTime = (isoString: string) => {
-        if (!isoString) return "---";
-        return new Date(isoString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        return new Date(isoString).toLocaleDateString('vi-VN', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
     };
 
     const formatDuration = (seconds?: number) => {
         if (!seconds && seconds !== 0) return "---";
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
-        return `${m} phút ${s} giây`;
+        return `${m}p ${s}s`;
     };
 
-    const getDifficultyLabel = (level: string) => {
-        const map: Record<string, string> = {
-            'EASY': 'Dễ',
-            'MEDIUM': 'Trung bình',
-            'HARD': 'Khó',
-        };
-        return map[level] || level || "---";
+    const getScoreColor = (score: number) => {
+        if (score >= 8) return "text-emerald-600";
+        if (score >= 5) return "text-amber-600";
+        return "text-rose-600";
     };
+
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+            <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-500 font-medium animate-pulse">Đang tải chi tiết bài thi...</p>
+        </div>
+    );
+
+    if (!history || !exam) return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4 text-center">
+            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Không tìm thấy dữ liệu</h3>
+            <p className="text-gray-500 mb-6">Có thể bài thi này không tồn tại hoặc đã bị xóa.</p>
+            <button
+                onClick={() => router.back()}
+                className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+            >
+                Quay lại
+            </button>
+        </div>
+    );
 
     return (
-        <div className="min-h-screen bg-white text-gray-800 font-sans p-8">
-            <div className="max-w-5xl mx-auto">
-                <p className="text-gray-500 text-sm mb-4 uppercase tracking-wide">Xem chi tiết lịch sử thi</p>
+        <div className="min-h-screen bg-gray-50/50 pb-20">
+            {/* HERO HEADER */}
+            <div className="bg-white border-b border-gray-200 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500" />
 
-                {/* --- GRAY RESULTS BOX --- */}
-                <div className="bg-[#E5E7EB] border border-blue-400 rounded p-0 mb-8 overflow-hidden">
-                    {/* Title */}
-                    <div className="border-b border-gray-300 p-6">
-                        <h1 className="text-2xl font-bold text-black">{history.examTitle}</h1>
+                <div className="max-w-5xl mx-auto px-6 py-8">
+                    <button
+                        onClick={() => router.back()}
+                        className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors mb-6 text-sm font-medium group"
+                    >
+                        <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                        Quay lại danh sách
+                    </button>
+
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                        <div>
+                            <div className="flex items-center gap-2 text-violet-600 font-semibold text-sm uppercase tracking-wider mb-2">
+                                <span className="bg-violet-50 px-2 py-1 rounded-md border border-violet-100">
+                                    {history.categoryName || exam.examLevel || "Exam"}
+                                </span>
+                                <span className="text-gray-300">•</span>
+                                <span className="flex items-center gap-1.5 text-gray-500 normal-case">
+                                    <Calendar size={14} /> {formatDate(history.submittedAt)}
+                                </span>
+                            </div>
+                            <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-2 leading-tight">
+                                {history.examTitle}
+                            </h1>
+                            <div className="flex items-center gap-4 text-gray-500 text-sm">
+                                <span className="flex items-center gap-1.5 bg-gray-100/50 px-2 py-1 rounded">
+                                    <Clock size={14} /> Thời gian làm: <span className="font-medium text-gray-900">{formatDuration(history.timeSpent)}</span>
+                                </span>
+                                <span className="flex items-center gap-1.5 bg-gray-100/50 px-2 py-1 rounded">
+                                    <Target size={14} /> Lần thi: <span className="font-medium text-gray-900">{history.attemptNumber || 1}</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* BIG SCORE */}
+                        <div className="flex items-center gap-6 bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-sm">
+                            <div className="text-right hidden sm:block">
+                                <p className="text-sm text-gray-500 font-medium uppercase tracking-wide">Tổng điểm</p>
+                                <p className={`text-3xl font-black ${getScoreColor(history.score)}`}>{history.score}/10</p>
+                            </div>
+                            <div className="w-px h-12 bg-gray-200 hidden sm:block"></div>
+                            <div className="flex flex-col items-center">
+                                <div className="relative w-16 h-16 flex items-center justify-center">
+                                    <svg className="w-full h-full transform -rotate-90">
+                                        <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-gray-200" />
+                                        <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent"
+                                            className={getScoreColor(history.score)}
+                                            strokeDasharray={175.9}
+                                            strokeDashoffset={175.9 - (175.9 * (stats?.accuracy || 0)) / 100}
+                                            strokeLinecap="round"
+                                        />
+                                    </svg>
+                                    <span className="absolute text-xs font-bold text-gray-700">{stats?.accuracy}%</span>
+                                </div>
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase">Chính xác</span>
+                            </div>
+                        </div>
                     </div>
+                </div>
+            </div>
 
-                    {/* Info Row 1 */}
-                    <div className="border-b border-gray-300 grid grid-cols-4 divide-x divide-gray-300 bg-[#E5E7EB]">
-                        <div className="p-4 text-center">
-                            <span className="block text-sm font-medium mb-1">Ngày thi:</span>
-                            <span className="font-bold">{formatDate(history.submittedAt)}</span>
+            {/* CONTENT */}
+            <div className="max-w-5xl mx-auto px-6 py-8">
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <CheckCircle2 size={20} />
                         </div>
-                        <div className="p-4 text-center">
-                            <span className="block text-sm font-medium mb-1">Bắt đầu lúc:</span>
-                            <span className="font-bold">{formatTime(history.startedAt || "")}</span>
-                        </div>
-                        <div className="p-4 text-center">
-                            <span className="block text-sm font-medium mb-1">Loại đề thi:</span>
-                            <span className="font-bold">{getDifficultyLabel(exam.examLevel)}</span>
-                        </div>
-                        <div className="p-4 text-center">
-                            <span className="block text-sm font-medium mb-1">Thời gian làm bài:</span>
-                            <span className="font-bold">{formatDuration(history.timeSpent)}</span>
-                        </div>
-                        <div className="p-4 text-center">
-                            <span className="block text-sm font-medium mb-1">Thời gian nộp bài:</span>
-                            <span className="font-bold">{formatTime(history.submittedAt)}</span>
+                        <div>
+                            <p className="text-xs text-gray-500 font-bold uppercase">Đúng</p>
+                            <p className="text-xl font-bold text-gray-900">{history.correctCount}</p>
                         </div>
                     </div>
-
-                    {/* Info Row 2 (Stats) */}
-                    <div className="grid grid-cols-3 divide-x divide-gray-300 bg-[#E5E7EB]">
-                        <div className="p-4 text-center">
-                            <span className="block text-sm font-medium mb-1">Số câu đúng:</span>
-                            <span className="font-bold text-lg">{history.correctCount}/{history.totalQuestions}</span>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
+                            <XCircle size={20} />
                         </div>
-                        <div className="p-4 text-center">
-                            <span className="block text-sm font-medium mb-1">Số điểm:</span>
-                            <span className="font-bold text-lg">{history.score}</span>
+                        <div>
+                            <p className="text-xs text-gray-500 font-bold uppercase">Sai</p>
+                            <p className="text-xl font-bold text-gray-900">{history.wrongCount}</p>
                         </div>
-                        <div className="p-4 text-center">
-                            <span className="block text-sm font-medium mb-1">Lượt thi:</span>
-                            <span className="font-bold text-lg">{history.attemptNumber || 1}</span>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <BarChart3 size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500 font-bold uppercase">Tổng câu</p>
+                            <p className="text-xl font-bold text-gray-900">{history.totalQuestions}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <Trophy size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500 font-bold uppercase">Xếp loại</p>
+                            <p className="text-xl font-bold text-gray-900">
+                                {history.score >= 8 ? "Giỏi" : history.score >= 5 ? "Khá" : "Chưa đạt"}
+                            </p>
                         </div>
                     </div>
                 </div>
 
-
-                {/* --- QUESTIONS LIST --- */}
-                <div className="bg-white">
+                {/* Question List */}
+                <div className="space-y-6">
                     {exam.examQuestions?.map(({ question: q }, index) => {
-                        const studentSelectedIds = selectedAnswersMap[q.id];
+                        const studentSelectedIds = selectedAnswersMap[q.id] || {};
+                        const userHasCorrect = Object.values(studentSelectedIds).some(isCorrect => isCorrect);
+                        const userHasAnswered = Object.keys(studentSelectedIds).length > 0;
 
                         return (
-                            <div key={q.id} className="mb-8 p-4">
-                                {/* Question Title */}
-                                <div className="flex gap-2 mb-4">
-                                    <span className="font-bold text-[#4D1597]">{index + 1}.</span>
-                                    <h3 className="font-bold text-[#4D1597]">{q.title}</h3>
-                                </div>
-
-                                {/* Answers */}
-                                <div className="space-y-3 ml-6 mb-6">
-                                    {q.answers.map((ans) => {
-                                        const selectedRecord = studentSelectedIds || {};
-                                        const isSelected = selectedRecord[ans.id] !== undefined;
-                                        const isSnapshotCorrect = isSelected ? selectedRecord[ans.id] : false;
-
-                                        // Based on Teacher logic but styled cleaner
-                                        // Default
-                                        let textStyle = "text-gray-700";
-                                        let icon = (
-                                            <div className={`w-4 h-4 rounded-full border border-gray-400 mr-3 flex items-center justify-center`}></div>
-                                        );
-
-                                        if (isSelected) {
-                                            if (isSnapshotCorrect) { // User picked THIS ONE and it is CORRECT
-                                                textStyle = "text-[#059669] font-bold"; // Green
-                                                icon = (
-                                                    <div className="w-4 h-4 rounded-full border border-[#059669] bg-[#059669] mr-3 flex items-center justify-center">
-                                                        <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                                                    </div>
-                                                );
-                                            } else { // User picked THIS ONE and it is WRONG
-                                                textStyle = "text-red-600 font-medium";
-                                                icon = (
-                                                    <div className="w-4 h-4 rounded-full border border-red-500 bg-red-500 mr-3 flex items-center justify-center">
-                                                        <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                                                    </div>
-                                                );
-                                            }
-                                        }
-
-                                        // Special case: Highlight actual correct answer in green IF user missed it?
-                                        // The mockup only shows user selection + "Đáp án" box below. 
-                                        // Let's stick to the mockup: Only highlight user selection here.
-
-                                        let containerStyle = "flex items-center p-2 rounded-lg";
-                                        if (isSelected) {
-                                            if (isSnapshotCorrect) {
-                                                containerStyle += " bg-green-50 border border-green-200";
-                                            } else {
-                                                containerStyle += " bg-red-50 border border-red-200";
-                                            }
-                                        }
-
-                                        return (
-                                            <div key={ans.id} className={containerStyle}>
-                                                {icon}
-                                                <span className={textStyle}>{ans.text}</span>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-
-                                {/* Correct Answer Box */}
-                                <div className="mt-4 ml-6 p-4 bg-[#F3EBFD] rounded-lg">
-                                    <div className="flex flex-col items-start gap-3">
-                                        <span className="bg-[#4D1597] text-white text-xs px-2 py-1 rounded font-bold uppercase tracking-wider shrink-0">
-                                            Đáp án
+                            <motion.div
+                                key={q.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: index * 0.05 }}
+                                className={`bg-white rounded-2xl p-6 md:p-8 shadow-sm border ${userHasCorrect ? 'border-emerald-200 ring-1 ring-emerald-50' :
+                                    userHasAnswered ? 'border-rose-200 ring-1 ring-rose-50' : 'border-gray-200'
+                                    }`}
+                            >
+                                <div className="flex gap-4">
+                                    <div className="shrink-0">
+                                        <span className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${userHasCorrect ? 'bg-emerald-100 text-emerald-700' :
+                                            userHasAnswered ? 'bg-rose-100 text-rose-700' : 'bg-gray-100 text-gray-500'
+                                            }`}>
+                                            {index + 1}
                                         </span>
-                                        <div className="text-[#4D1597] font-medium flex flex-col gap-1">
-                                            {(() => {
-                                                console.log(`[DEBUG] Question ID: ${q.id}, Type: ${q.type}, CorrectAnswer: ${q.correctAnswer}`);
-                                                console.log(`[DEBUG] Answers:`, q.answers);
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-bold text-gray-900 mb-6 leading-relaxed">
+                                            {q.title}
+                                        </h3>
 
-                                                let correctList = q.answers.filter(a => a.correct);
-                                                // Fallback: If no answer is marked correct but we have a correctAnswer string
-                                                if (correctList.length === 0 && q.correctAnswer) {
-                                                    const match = q.answers.find(a =>
-                                                        a.text === q.correctAnswer ||
-                                                        String(a.text).toLowerCase() === String(q.correctAnswer).toLowerCase()
-                                                    );
-                                                    if (match) {
-                                                        correctList = [match];
+                                        <div className="flex flex-col gap-3">
+                                            {q.answers.map((ans) => {
+                                                const isSelected = studentSelectedIds[ans.id] !== undefined;
+                                                const isSnapshotCorrect = isSelected ? studentSelectedIds[ans.id] : false;
+
+                                                // Determine styles
+                                                let containerClass = "relative flex items-center p-4 rounded-xl border-2 transition-all duration-200 ";
+                                                let icon = <div className="w-5 h-5 rounded-full border-2 border-gray-300 mr-3 shrink-0" />;
+
+                                                if (isSelected) {
+                                                    if (isSnapshotCorrect) {
+                                                        // Selected Correctly
+                                                        containerClass += "bg-emerald-50 border-emerald-500 text-emerald-800";
+                                                        icon = <CheckCircle2 className="w-5 h-5 text-emerald-600 mr-3 shrink-0" />;
                                                     } else {
-                                                        // If not found in options (e.g. data mismatch), show the raw string
-                                                        correctList = [{ id: -1, text: q.correctAnswer, correct: true }];
+                                                        // Selected Wrongly
+                                                        containerClass += "bg-rose-50 border-rose-500 text-rose-800";
+                                                        icon = <XCircle className="w-5 h-5 text-rose-600 mr-3 shrink-0" />;
                                                     }
+                                                } else {
+                                                    // Not selected
+                                                    containerClass += "bg-white border-gray-100 text-gray-600 hover:border-violet-200";
                                                 }
 
-                                                return correctList.map(a => (
-                                                    <div key={a.id} className="flex items-center gap-2">
-                                                        <span className="text-lg">✓</span>
-                                                        <span>{a.text}</span>
+                                                return (
+                                                    <div key={ans.id} className={containerClass}>
+                                                        {icon}
+                                                        <span className="font-medium text-sm md:text-base">{ans.text}</span>
                                                     </div>
-                                                ));
-                                            })()}
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Show Correct Answer Logic */}
+                                        <div className="mt-6 pt-5 border-t border-gray-100">
+                                            <div className="flex items-start gap-3 bg-violet-50/50 p-4 rounded-xl border border-violet-100">
+                                                <div className="bg-violet-100 text-violet-600 p-1.5 rounded-md mt-0.5">
+                                                    <Check size={16} strokeWidth={3} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-violet-600 uppercase tracking-wider mb-1">Đáp án đúng</p>
+                                                    <div className="text-gray-800 font-medium">
+                                                        {(() => {
+                                                            let correctList = q.answers.filter(a => a.correct);
+                                                            if (correctList.length === 0 && q.correctAnswer) {
+                                                                // Try to find by text matching
+                                                                const match = q.answers.find(a =>
+                                                                    a.text === q.correctAnswer ||
+                                                                    String(a.text).toLowerCase() === String(q.correctAnswer).toLowerCase()
+                                                                );
+                                                                if (match) correctList = [match];
+                                                                else correctList = [{ id: -1, text: q.correctAnswer, correct: true }];
+                                                            }
+
+                                                            return correctList.map((a, i) => (
+                                                                <div key={i} className="mb-1 last:mb-0">{a.text}</div>
+                                                            ));
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <hr className="mt-8 border-gray-300" />
-                            </div>
-                        )
+                            </motion.div>
+                        );
                     })}
                 </div>
-
             </div>
         </div>
     );
