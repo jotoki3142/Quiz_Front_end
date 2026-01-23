@@ -1,95 +1,51 @@
-"use client";
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import toast from "react-hot-toast";
-import { useUser } from "@/lib/user";
+'use client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
-const PRIMARY_BG = "#6D0446";
-const BUTTON_BG = "#A53AEC";
+import React, { useState, useRef, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { fetchApi } from '@/lib/apiClient';
+import { useUser } from '@/lib/user';
+import {
+  UserCircleIcon,
+  CameraIcon,
+  EnvelopeIcon,
+  SparklesIcon,
+  ShieldCheckIcon,
+  ServerStackIcon,
+  CpuChipIcon,
+  GlobeAltIcon
+} from '@heroicons/react/24/outline';
+import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
+
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5MB
 
-const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M18 6 6 18"/>
-    <path d="m6 6 12 12"/>
-  </svg>
-);
-
-const getAuthToken = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('jwt');
-  }
-  return null;
-};
-
-async function fetchApi(url: string, options: any = {}) {
-  const token = getAuthToken();
-  const defaultHeaders = {
-    ...(!options.body || typeof options.body === 'string' || options.body instanceof URLSearchParams ? { 'Content-Type': 'application/json' } : {}),
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-  };
-
-  const config: any = {
-    method: options.method || 'GET',
-    headers: {
-      ...defaultHeaders,
-      ...(options.headers || {}),
-    },
-    credentials: "include", 
-  };
-  
-  if (options.body) {
-    if (options.body instanceof FormData) {
-        delete config.headers['Content-Type'];
-        config.body = options.body;
-    } else {
-        config.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
-    }
-  }
-
-  const response = await fetch(url, config as RequestInit);
-  const isJson = response.headers.get('content-type')?.includes('application/json');
-  
-  if (!response.ok) {
-    let errorText = "Lỗi không xác định";
-    try {
-        const errorData = isJson ? await response.json() : await response.text();
-        errorText = errorData.message || errorData.error || (typeof errorData === 'string' ? errorData : JSON.stringify(errorData));
-    } catch {
-    }
-    const errorMessage = errorText.substring(0, 200) || `Lỗi (${response.status}): Không thể thực hiện thao tác.`;
-    throw new Error(errorMessage);
-  }
-
-  try {
-      return isJson ? await response.json() : await response.text();
-  } catch (e) {
-      return (options.method === 'DELETE' || options.method === 'PUT' || options.method === 'POST') ? "Success" : null;
-  }
-}
-
-
-export default function AdminProfilePage() {
-  const { mutate } = useUser();
+const AdminProfilePage = () => {
+  const { user, mutate } = useUser();
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  
+
+  // Stats purely for visual dashboard feel (Admin doesn't have specific stats yet)
+  const stats = [
+    { label: 'Vai trò', value: 'Administrator', icon: ShieldCheckIcon, color: 'text-violet-600', bg: 'bg-violet-100' },
+    { label: 'Trạng thái', value: 'Hoạt động', icon: ServerStackIcon, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+    { label: 'Quyền hạn', value: 'Toàn hệ thống', icon: GlobeAltIcon, color: 'text-blue-600', bg: 'bg-blue-100' },
+  ];
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const data = await fetchApi(`${API_URL}/profile`);
-        console.log('Profile data from backend:', data);
-        setUsername(data.name || data.username || "");
-        setEmail(data.email || "");
+        const data = await fetchApi('/profile');
+        setUsername(data.name || data.username || '');
+        setEmail(data.email || '');
         setAvatar(data.avatar || null);
       } catch (error) {
-        console.error("Error fetching profile:", error);
-        toast.error("Không thể tải thông tin hồ sơ");
+        console.error('Error fetching profile:', error);
+        toast.error('Không thể tải thông tin hồ sơ');
       } finally {
         setLoading(false);
       }
@@ -100,17 +56,17 @@ export default function AdminProfilePage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     if (!file) {
-      if (e.target) e.target.value = "";
+      if (e.target) e.target.value = '';
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Vui lòng chọn tệp hình ảnh");
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn tệp hình ảnh');
       return;
     }
 
     if (file.size > MAX_AVATAR_SIZE) {
-      toast.error("Ảnh đại diện không được lớn hơn 5MB");
+      toast.error('Ảnh đại diện không được lớn hơn 5MB');
       return;
     }
 
@@ -121,80 +77,71 @@ export default function AdminProfilePage() {
     };
     reader.readAsDataURL(file);
 
-    if (e.target) e.target.value = "";
+    if (e.target) e.target.value = '';
   };
 
-  const handleChoose = () => {
+  const handleChooseAvatar = () => {
     fileRef.current?.click();
   };
 
-  const handleDeleteAvatar = () => {
+  const handleDeleteAvatar = async () => {
     if (!avatar) {
-      toast.error("Không có ảnh đại diện để xóa");
-      return;
-    }
-
-    setAvatar(null);
-    setAvatarFile(null);
-    if (fileRef.current) fileRef.current.value = "";
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username.trim()) {
-      toast.error("Tên không được để trống");
+      toast.error('Không có ảnh đại diện để xóa');
       return;
     }
 
     setSaving(true);
+    try {
+      await fetchApi('/profile/delete-avatar', { method: 'DELETE' });
+      setAvatar(null);
+      setAvatarFile(null);
+      await mutate();
+      toast.success('Đã xóa ảnh đại diện');
+    } catch (error) {
+      console.error('Error deleting avatar:', error);
+      toast.error('Không thể xóa ảnh đại diện');
+    } finally {
+      setSaving(false);
+    }
+  };
 
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim()) {
+      toast.error('Tên không được để trống');
+      return;
+    }
+
+    setSaving(true);
     try {
       let finalAvatarUrl = avatar;
 
-      // Trường hợp 1: Upload ảnh mới
+      // Upload new avatar if selected
       if (avatarFile) {
         const formData = new FormData();
-        formData.append("file", avatarFile);
-        
-        const uploadData = await fetchApi(`${API_URL}/profile/upload-avatar`, {
-          method: "POST",
+        formData.append('file', avatarFile);
+
+        const uploadData = await fetchApi('/profile/upload-avatar', {
+          method: 'POST',
           body: formData,
         });
 
         finalAvatarUrl = uploadData.avatarUrl;
-        
-      } 
-      // Trường hợp 2: Xóa ảnh (avatar là null và không có file mới)
-      else if (avatar === null) {
-        // Gọi API delete-avatar để xóa ảnh trên server
-        try {
-          await fetchApi(`${API_URL}/profile/delete-avatar`, {
-            method: "DELETE",
-          });
-        } catch (deleteError) {
-          console.error("Error deleting avatar:", deleteError);
-          // Vẫn tiếp tục cập nhật profile ngay cả khi xóa ảnh lỗi
-        }
-        finalAvatarUrl = null;
       }
-      // Trường hợp 3: Không thay đổi ảnh (giữ nguyên)
 
-      const response = await fetchApi(`${API_URL}/profile`, {
-        method: "PATCH",
+      // Update profile info
+      await fetchApi('/profile/update', {
+        method: 'PATCH',
         body: { username: username.trim(), avatar: finalAvatarUrl },
       });
 
       setAvatar(finalAvatarUrl);
       setAvatarFile(null);
-      
-      // Cập nhật lại user global để header nhận avatar mới
       await mutate();
-      
-      toast.success("Cập nhật hồ sơ thành công");
-      
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      toast.error((error as any)?.message || "Lỗi khi cập nhật hồ sơ");
+      toast.success('Cập nhật hồ sơ thành công');
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast.error(error.message || 'Không thể cập nhật hồ sơ');
     } finally {
       setSaving(false);
     }
@@ -202,122 +149,174 @@ export default function AdminProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen" style={{ backgroundColor: PRIMARY_BG }}>
-        <p className="text-white text-lg">Đang tải...</p>
+      <div className="flex justify-center items-center h-screen">
+        <div className="h-12 w-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-0" style={{ color: "#111" }}>
-      <div className="bg-white rounded-xl shadow-2xl overflow-hidden mt-12 border border-gray-200">
-        <div 
-            className="p-4 sm:p-8 flex flex-col md:flex-row gap-8 items-start"
-        >
-          {/* Avatar và chọn file */}
-          <div className="flex flex-col items-center w-full md:w-56" style={{ minWidth: 220 }}>
-            <div
-              className="rounded-full overflow-hidden w-52 h-52 flex items-center justify-center border-4 border-purple-400 shadow-lg"
-              style={{ background: "#F7EFFF" }}
-            >
-              {avatar ? (
-                // Sử dụng key để ép React render lại nếu avatar thay đổi (Base64)
-                <img key={avatar} src={avatar} alt="Ảnh đại diện" className="w-full h-full object-cover" />
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="w-28 h-28 text-purple-700 opacity-60"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-              )}
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-fuchsia-50 pb-12">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-violet-600 to-fuchsia-600 pb-32">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-white/10 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-60 h-60 rounded-full bg-black/10 blur-3xl"></div>
 
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
+          <div className="flex flex-col items-center text-center text-white">
+            {/* Avatar */}
+            <div className="relative group">
+              <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-full overflow-hidden border-4 border-white shadow-2xl bg-white/20">
+                {avatar ? (
+                  <img src={avatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-violet-100">
+                    <UserCircleIcon className="w-24 h-24 text-violet-400" />
+                  </div>
+                )}
+              </div>
 
-            <div className="flex flex-col gap-3 mt-6 w-full max-w-xs">
               <button
-                type="button"
-                onClick={handleChoose}
-                className="px-4 py-2 text-sm bg-purple-100 text-purple-800 font-semibold rounded-full hover:bg-purple-200 transition shadow-md"
+                onClick={handleChooseAvatar}
+                className="absolute bottom-2 right-2 p-3 bg-white text-violet-600 rounded-full shadow-lg hover:bg-violet-50 transition-all transform hover:scale-110"
                 disabled={saving}
               >
-                Chọn ảnh
+                <CameraIcon className="w-5 h-5" />
               </button>
-              {avatar && (
-                <button
-                  type="button"
-                  onClick={handleDeleteAvatar}
-                  disabled={saving}
-                  className="px-4 py-2 text-sm bg-red-100 text-red-700 font-semibold rounded-full hover:bg-red-200 transition disabled:opacity-50 shadow-md"
-                >
-                  Xóa ảnh đại diện
-                </button>
-              )}
-            </div>
-          </div>
 
-          {/* Form thông tin */}
-          <form className="flex-1 w-full md:mt-0 mt-8" onSubmit={handleSubmit}>
-            {/* Form block */}
-            <div className="max-w-xl mx-auto md:mx-0">
-              <h2 className="text-2xl font-bold mb-6 text-gray-800">Thông tin cá nhân</h2>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
+
+            {/* Name/Email Display */}
+            <div className="mt-6 space-y-2">
+              <h1 className="text-3xl sm:text-4xl font-bold">{username}</h1>
+              <p className="text-violet-100 flex items-center gap-2 justify-center">
+                <EnvelopeIcon className="w-4 h-4" />
+                {email}
+              </p>
+            </div>
+
+            {/* Action Buttons for Avatar */}
+            {(avatarFile || (avatar && !avatarFile)) && (
+              <div className="mt-6 flex gap-3">
+                {avatarFile && (
+                  <button onClick={handleSave} className="bg-white text-violet-600 px-4 py-2 rounded-full font-bold shadow-lg">Lưu ảnh mới</button>
+                )}
+                {avatar && !avatarFile && (
+                  <button onClick={handleDeleteAvatar} className="bg-white/20 text-white px-4 py-2 rounded-full font-bold border border-white/50 hover:bg-white/30">Xóa ảnh</button>
+                )}
+              </div>
+            )}
+
+
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Cards */}
+      <section className="relative z-20 -mt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {stats.map((stat, index) => (
+            <div key={index} className="bg-white/90 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+              <div className="flex items-center gap-4">
+                <div className={`w-14 h-14 ${stat.bg} rounded-xl flex items-center justify-center`}>
+                  <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                </div>
                 <div>
-                  <input
-                    value={email}
-                    readOnly
-                    className="w-full px-4 py-3 rounded-lg text-sm bg-zinc-100 border border-zinc-200 cursor-not-allowed"
-                    title="Email không thể thay đổi"
-                  />
-                  <div className="mt-1">
-                    <span className="text-xs text-red-500 font-medium italic">Email không thể thay đổi.</span>
-                  </div>
+                  <div className={`text-xl font-bold ${stat.color}`}>{stat.value}</div>
+                  <div className="text-sm text-zinc-600 font-medium">{stat.label}</div>
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tên người dùng</label>
+      {/* Main Content */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pb-20">
+        <div className="bg-white rounded-2xl shadow-lg p-8 border border-zinc-100">
+          <div className="flex items-center gap-3 mb-8 pb-4 border-b border-zinc-100">
+            <div className="p-2 bg-violet-100 rounded-lg">
+              <SparklesIcon className="w-6 h-6 text-violet-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-zinc-900">Cập nhật thông tin</h2>
+          </div>
+
+          <form onSubmit={handleSave} className="space-y-6">
+            {/* Username Input */}
+            <div>
+              <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                Tên hiển thị
+              </label>
+              <div className="relative">
                 <input
+                  type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg text-sm bg-white border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
-                  placeholder="Nhập tên của bạn"
+                  className="block w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all outline-none text-zinc-900 placeholder:text-zinc-400"
+                  placeholder="Nhập tên hiển thị của bạn"
                   required
-                  disabled={saving}
                 />
               </div>
+            </div>
 
-              <div className="pt-4 border-t border-zinc-100">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  style={{ background: BUTTON_BG }}
-                  className={`text-white w-full px-6 py-3 rounded-full font-semibold text-lg transition shadow-xl ${
-                    saving ? "opacity-70 cursor-not-allowed" : "hover:brightness-110"
-                  }`}
-                >
-                  {saving ? "Đang cập nhật..." : "Cập nhật hồ sơ"}
-                </button>
+            {/* Email Input (Read-only) */}
+            <div>
+              <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                Email
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  value={email}
+                  readOnly
+                  className="block w-full px-4 py-3 bg-zinc-100 border border-zinc-200 rounded-xl text-zinc-500 cursor-not-allowed"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                  <LockClosedIcon className="w-5 h-5" />
+                </div>
               </div>
+              <p className="mt-2 text-xs text-zinc-500">Email không thể thay đổi vì lý do bảo mật.</p>
+            </div>
+
+            {/* Submit Button */}
+            <div className="pt-4">
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full md:w-auto px-8 py-3 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Lưu thay đổi</span>
+                    <CheckCircleSolid className="w-5 h-5" />
+                  </>
+                )}
+              </button>
             </div>
           </form>
         </div>
-      </div>
-      
-      </div>
+      </section>
+    </div>
   );
-}
+};
+
+// Helper icon component since LockClosedIcon wasn't imported in the list above but used in the form
+const LockClosedIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+  </svg>
+);
+
+export default AdminProfilePage;
