@@ -25,24 +25,32 @@ export default function StudentWaitingRoomPage() {
     const [loading, setLoading] = useState(true);
     const [examInfo, setExamInfo] = useState<ExamJoinInfo | null>(null);
     const [participants, setParticipants] = useState<any[]>([]);
+    const hasJoined = useRef(false);
 
     useEffect(() => {
         if (!accessCode) return;
+        if (hasJoined.current) return;
 
         const loadExamInfo = async () => {
             try {
+                hasJoined.current = true;
                 setLoading(true);
-                // Fetch exam info (student already joined from home page)
-                const response = await fetchApi(`/online-exams/info/${accessCode}`);
-                setExamInfo(response);
+                // Call join API (handles both joining and retrieving info)
+                const response = await fetchApi(`/online-exams/join/${accessCode}`, { method: 'POST' });
 
-                // Get initial participants list
-                const parts = await fetchApi(`/waiting-room/${accessCode}/participants`);
-                setParticipants(Array.isArray(parts) ? parts : []);
+                setExamInfo({
+                    examId: response.examOnlineId,
+                    examName: response.name,
+                    status: response.status,
+                    roomName: response.name,
+                    participantCount: response.participantCount
+                });
+
+                setParticipants(response.participants || []);
 
             } catch (error: any) {
                 console.error("Load error:", error);
-                toastError(error.message || "Không thể tải thông tin phòng chờ");
+                toastError(error.message || "Không thể tham gia phòng chờ");
                 router.push("/student/studenthome");
             } finally {
                 setLoading(false);
