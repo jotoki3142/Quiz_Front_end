@@ -10,7 +10,6 @@ const showToast = (
   type: "success" | "error",
   duration: number = 3000
 ) => {
-  // Remove toast.dismiss() to allow toast to display for full duration
 
   if (type === "success") {
     toast.success(message, { duration });

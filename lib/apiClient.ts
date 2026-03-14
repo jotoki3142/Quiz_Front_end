@@ -9,11 +9,6 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * LƯU Ý: localhost không hoạt động trên Mobile Emulator (Android/iOS).
- * Để Expo có thể kết nối với Backend, bạn nên thay localhost bằng địa chỉ IP máy tính của bạn (VD: 192.168.1.10)
- * hoặc dùng biến môi trường.
- */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8082/api';
 
 interface FetchApiOptions {
@@ -29,15 +24,12 @@ const isClient = typeof window !== 'undefined';
  * @param options
  */
 export async function fetchApi(endpoint: string, options: FetchApiOptions = {}) {
-  // Use async storage for token
   const token = await storage.getItem('jwt');
 
-  // Khởi tạo headers từ options trước
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string> || {}),
   };
 
-  // Chỉ set Content-Type mặc định cho các request KHÔNG dùng FormData
   if (!(options.body instanceof FormData)) {
     if (!headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
@@ -49,10 +41,8 @@ export async function fetchApi(endpoint: string, options: FetchApiOptions = {}) 
   }
 
   let body = options.body;
-  // Nếu body là object thông thường (không phải FormData) thì stringify thành JSON
   if (body && typeof body === 'object' && !(body instanceof FormData)) {
     if (headers['Content-Type'] === 'application/x-www-form-urlencoded') {
-      // Trường hợp muốn tự encode form-url-encoded sẽ xử lý ở nơi khác nếu cần
     } else {
       body = JSON.stringify(body);
     }
@@ -72,13 +62,10 @@ export async function fetchApi(endpoint: string, options: FetchApiOptions = {}) 
 
   if (!response.ok) {
     if (response.status === 401) {
-      // 401 Unauthorized: Token hết hạn hoặc không hợp lệ
       await storage.removeItem('jwt');
       if (isClient) {
         window.location.href = '/auth/login';
       }
-      // Note: For Expo, you should handle navigation using a router hook or state.
-
       throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', response.status);
     }
 
