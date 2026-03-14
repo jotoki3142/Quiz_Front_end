@@ -25,12 +25,11 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+import { storage } from './storage';
+
 const fetcher = async (url: string): Promise<User | null> => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
   try {
-    const token = localStorage.getItem('jwt');
+    const token = await storage.getItem('jwt');
     if (!token) {
       return null;
     }

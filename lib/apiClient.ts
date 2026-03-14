@@ -1,3 +1,5 @@
+import { storage } from './storage';
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -6,6 +8,12 @@ export class ApiError extends Error {
     this.status = status;
   }
 }
+
+/**
+ * LƯU Ý: localhost không hoạt động trên Mobile Emulator (Android/iOS).
+ * Để Expo có thể kết nối với Backend, bạn nên thay localhost bằng địa chỉ IP máy tính của bạn (VD: 192.168.1.10)
+ * hoặc dùng biến môi trường.
+ */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8082/api';
 
 interface FetchApiOptions {
@@ -21,11 +29,8 @@ const isClient = typeof window !== 'undefined';
  * @param options
  */
 export async function fetchApi(endpoint: string, options: FetchApiOptions = {}) {
-  let token: string | null = null;
-
-  if (isClient) {
-    token = localStorage.getItem('jwt');
-  }
+  // Use async storage for token
+  const token = await storage.getItem('jwt');
 
   // Khởi tạo headers từ options trước
   const headers: Record<string, string> = {
@@ -57,7 +62,6 @@ export async function fetchApi(endpoint: string, options: FetchApiOptions = {}) 
   console.log(`[fetchApi] ${options.method || 'GET'} ${fullUrl}`, {
     headers,
     hasToken: !!token,
-    body: body ? (typeof body === 'string' ? JSON.parse(body) : body) : undefined,
   });
 
   const response = await fetch(fullUrl, {
@@ -69,22 +73,21 @@ export async function fetchApi(endpoint: string, options: FetchApiOptions = {}) 
   if (!response.ok) {
     if (response.status === 401) {
       // 401 Unauthorized: Token hết hạn hoặc không hợp lệ
+      await storage.removeItem('jwt');
       if (isClient) {
-        localStorage.removeItem('jwt');
         window.location.href = '/auth/login';
       }
+      // Note: For Expo, you should handle navigation using a router hook or state.
 
       throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', response.status);
     }
 
     if (response.status === 403) {
-      // 403 Forbidden: User được xác thực nhưng không có quyền truy cập
       const errorData = await response.json().catch(() => ({ error: 'Bạn không có quyền truy cập tài nguyên này.' }));
       throw new ApiError(errorData.error || 'Bạn không có quyền truy cập tài nguyên này.', response.status);
     }
 
     const errorData = await response.json().catch(() => ({ message: `Request failed with status ${response.status}` }));
-    // Backend returns { error: "..." } for most exceptions
     const errorMessage = errorData.message || errorData.error || `Request failed with status ${response.status}`;
     throw new ApiError(errorMessage, response.status);
   }
