@@ -265,7 +265,7 @@ export default function UpdateExamPage() {
                         isCorrect: a.correct || false,
                     })),
                     visibility: eq.question.visibility,
-                    isReadOnly: eq.question.createdBy !== user.username || eq.question.visibility === 'PUBLIC'
+                    isReadOnly: eq.fromLibrary === true
                 })) || [];
 
                 // Empty default
@@ -367,11 +367,13 @@ export default function UpdateExamPage() {
     const handleSubmit = async (values: ExamFormValues) => {
         try {
             const questionIds: number[] = [];
+            const libraryQuestionIds: number[] = [];
 
             // 1. Process Questions (Create/Update)
             for (const q of values.questions) {
                 if (q.isReadOnly && q.id) {
                     questionIds.push(q.id);
+                    libraryQuestionIds.push(q.id);
                     continue;
                 }
 
@@ -446,6 +448,7 @@ export default function UpdateExamPage() {
                 startTime: `${values.startDate}T${values.startTime}:00`,
                 endTime: `${values.endDate}T${values.endTime}:00`,
                 questionIds: questionIds,
+                libraryQuestionIds: libraryQuestionIds,
                 description: "",
                 status: submitAction // Use state
             };
