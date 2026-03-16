@@ -232,16 +232,31 @@ export default function StudentAccountsPage() {
     if (student.status !== 'ACTIVE' && student.status !== 'LOCKED') return;
 
     const isLocking = student.status === 'ACTIVE';
-    try {
-      setLoading(true);
-      if (isLocking) await fetchApi(`/api/admin/accounts/students/${student.studentId}/lock`, { method: 'POST' });
-      else await fetchApi(`/api/admin/accounts/students/${student.studentId}/unlock`, { method: 'POST' });
+    const actionText = isLocking ? 'Khóa' : 'Mở khóa';
 
-      toast.success(isLocking ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản');
-      fetchStudents();
-    } catch (error: any) {
-      toast.error(error.message || 'Lỗi cập nhật trạng thái');
-      setLoading(false);
+    const result = await Swal.fire({
+      title: `${actionText} tài khoản?`,
+      text: `Bạn có chắc muốn ${isLocking ? 'khóa' : 'mở khóa'} tài khoản học sinh "${student.username}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: isLocking ? '#f59e0b' : '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Đồng ý',
+      cancelButtonText: 'Hủy bỏ',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        setLoading(true);
+        if (isLocking) await fetchApi(`/api/admin/accounts/students/${student.studentId}/lock`, { method: 'POST' });
+        else await fetchApi(`/api/admin/accounts/students/${student.studentId}/unlock`, { method: 'POST' });
+
+        toast.success(isLocking ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản');
+        fetchStudents();
+      } catch (error: any) {
+        toast.error(error.message || 'Lỗi cập nhật trạng thái');
+        setLoading(false);
+      }
     }
   };
 

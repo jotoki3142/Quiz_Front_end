@@ -38,6 +38,8 @@ export interface UserTableProps<T> {
     onClearFilters: () => void;
     showStatusFilter?: boolean;
     showClearFilter?: boolean;
+    emptyStateHead?: React.ReactNode;
+    emptyStateSub?: React.ReactNode;
 }
 
 export default function UserTable<T>({
@@ -61,6 +63,8 @@ export default function UserTable<T>({
     onClearFilters,
     showStatusFilter = true,
     showClearFilter = true,
+    emptyStateHead = "Không tìm thấy dữ liệu",
+    emptyStateSub = "Thử thay đổi bộ lọc hoặc tìm kiếm lại.",
 }: UserTableProps<T>) {
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -200,8 +204,8 @@ export default function UserTable<T>({
                                     <td colSpan={columns.length} className="px-6 py-12 text-center">
                                         <div className="flex flex-col items-center justify-center text-zinc-400">
                                             <MagnifyingGlassIcon className="w-12 h-12 mb-3 bg-zinc-50 p-2 rounded-full" />
-                                            <p className="text-lg font-medium text-zinc-900">Không tìm thấy dữ liệu</p>
-                                            <p className="text-sm">Thử thay đổi bộ lọc hoặc tìm kiếm lại.</p>
+                                            <p className="text-lg font-medium text-zinc-900">{emptyStateHead}</p>
+                                            <p className="text-sm">{emptyStateSub}</p>
                                         </div>
                                     </td>
                                 </tr>
