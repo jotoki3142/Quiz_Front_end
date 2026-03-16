@@ -429,7 +429,7 @@ export default function TeacherEditOnlineExamPage() {
                         text: a.text,
                         correct: a.isCorrect,
                     })),
-                    visibility: "PRIVATE",
+                    visibility: "HIDDEN",
                     createdBy: "TEACHER"
                 };
 
