@@ -324,6 +324,8 @@ export default function AdminReviewTeachersPage() {
                 }}
                 showStatusFilter={false}
                 showClearFilter={false}
+                emptyStateHead={searchEmail || searchName ? "Không tìm thấy kết quả" : "Không có yêu cầu nào"}
+                emptyStateSub={searchEmail || searchName ? "Không có giáo viên nào phù hợp với tìm kiếm của bạn." : "Hiện tại không có giáo viên nào đang chờ duyệt."}
             />
 
             {selectedTeacher && (

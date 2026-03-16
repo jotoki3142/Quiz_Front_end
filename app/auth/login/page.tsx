@@ -72,9 +72,29 @@ export default function LoginPage() {
       console.error('Login Error:', err);
       let errorMessage = 'Sai tài khoản hoặc mật khẩu.';
 
-      if (err instanceof ApiError) errorMessage = err.message;
-      else if (err.error) errorMessage = err.error;
-      else if (err.message) errorMessage = err.message;
+      if (err instanceof ApiError) {
+        if (
+          err.status === 401 ||
+          err.message?.includes('UsernameNotFoundException') ||
+          err.message?.includes('Bad credentials')
+        ) {
+          errorMessage = 'Sai tài khoản hoặc mật khẩu.';
+        } else {
+          errorMessage = err.message;
+        }
+      } else if (err.error) {
+        if (err.error?.includes('UsernameNotFoundException') || err.error?.includes('Bad credentials')) {
+          errorMessage = 'Sai tài khoản hoặc mật khẩu.';
+        } else {
+          errorMessage = err.error;
+        }
+      } else if (err.message) {
+        if (err.message?.includes('UsernameNotFoundException') || err.message?.includes('Bad credentials')) {
+           errorMessage = 'Sai tài khoản hoặc mật khẩu.';
+        } else {
+           errorMessage = err.message;
+        }
+      }
 
       setError(errorMessage);
 

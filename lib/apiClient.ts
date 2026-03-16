@@ -68,13 +68,17 @@ export async function fetchApi(endpoint: string, options: FetchApiOptions = {}) 
 
   if (!response.ok) {
     if (response.status === 401) {
+      const isLoginContext = endpoint.includes('/auth/login') || (isClient && window.location.pathname.includes('/auth/login'));
+      
       // 401 Unauthorized: Token hết hạn hoặc không hợp lệ
-      if (isClient) {
-        localStorage.removeItem('jwt');
-        window.location.href = '/auth/login';
-      }
+      if (!isLoginContext) {
+        if (isClient) {
+          localStorage.removeItem('jwt');
+          window.location.href = '/auth/login';
+        }
 
-      throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', response.status);
+        throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', response.status);
+      }
     }
 
     if (response.status === 403) {

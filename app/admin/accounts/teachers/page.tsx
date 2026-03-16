@@ -237,16 +237,31 @@ export default function TeacherAccountsPage() {
     if (teacher.status !== 'APPROVED' && teacher.status !== 'LOCKED') return;
 
     const isLocking = teacher.status === 'APPROVED';
-    try {
-      setLoading(true);
-      if (isLocking) await fetchApi(`/api/admin/accounts/teachers/${teacher.teacherId}/lock`, { method: 'POST' });
-      else await fetchApi(`/api/admin/accounts/teachers/${teacher.teacherId}/unlock`, { method: 'POST' });
+    const actionText = isLocking ? 'Khóa' : 'Mở khóa';
+    
+    const result = await Swal.fire({
+      title: `${actionText} tài khoản?`,
+      text: `Bạn có chắc muốn ${isLocking ? 'khóa' : 'mở khóa'} tài khoản giáo viên "${teacher.username}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: isLocking ? '#f59e0b' : '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Đồng ý',
+      cancelButtonText: 'Hủy bỏ',
+    });
 
-      toast.success(isLocking ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản');
-      fetchTeachers();
-    } catch (error: any) {
-      toast.error(error.message || 'Lỗi cập nhật trạng thái');
-      setLoading(false);
+    if (result.isConfirmed) {
+      try {
+        setLoading(true);
+        if (isLocking) await fetchApi(`/api/admin/accounts/teachers/${teacher.teacherId}/lock`, { method: 'POST' });
+        else await fetchApi(`/api/admin/accounts/teachers/${teacher.teacherId}/unlock`, { method: 'POST' });
+
+        toast.success(isLocking ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản');
+        fetchTeachers();
+      } catch (error: any) {
+        toast.error(error.message || 'Lỗi cập nhật trạng thái');
+        setLoading(false);
+      }
     }
   };
 
