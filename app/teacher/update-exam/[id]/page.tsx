@@ -412,7 +412,7 @@ export default function UpdateExamPage() {
                     // Create new
                     const createPayload = {
                         ...payload,
-                        visibility: "PRIVATE", // Changed from "HIDDEN" to "PRIVATE"
+                        visibility: "HIDDEN", // Changed from "PRIVATE" to "HIDDEN"
                         createdBy: "TEACHER",
                     };
                     console.log(`[DEBUG] Creating new question:`, createPayload);
